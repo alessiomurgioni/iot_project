@@ -1,0 +1,127 @@
+:root{
+  --ink:#0d1117; --panel:#161b22; --panel2:#1b222b; --line:#262d36;
+  --text:#e6edf3; --muted:#8b949e;
+  --cool:#38bdf8; --warm:#f59e0b; --alert:#f43f5e; --ok:#34d399;
+  --accent:var(--muted);            /* recolored by JS to match AC mode */
+}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--text);background:var(--ink);
+     font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+
+/* ── Auth screens ─────────────────────────────────────────── */
+.auth-screen{min-height:100vh;display:grid;place-items:center;
+  background:radial-gradient(1200px 600px at 50% -10%, #11202b 0%, var(--ink) 60%)}
+.card{width:min(380px,92vw);background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:28px 26px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.card h1{font-size:1.05rem;margin:0 0 2px;font-weight:600}
+.card .sub{margin:0 0 18px;color:var(--muted);font-size:.86rem}
+.card label{display:block;font-size:.78rem;color:var(--muted);margin:14px 0 6px}
+.card input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
+  background:#0d1117;color:var(--text);font-size:.95rem}
+.card input:focus{outline:none;border-color:var(--cool)}
+.card button{width:100%;margin-top:22px;padding:12px;border:0;border-radius:10px;
+  background:var(--cool);color:#04222f;font-weight:650;font-size:.95rem;cursor:pointer}
+.card button:hover{filter:brightness(1.06)}
+.card .alt{margin:18px 0 0;font-size:.84rem;color:var(--muted);text-align:center}
+.card .alt a{color:var(--cool);text-decoration:none}
+.err{margin-top:16px;color:var(--alert);font-size:.84rem}
+
+/* ── Brand mark ───────────────────────────────────────────── */
+.brand{display:flex;align-items:center;gap:10px}
+.brand b{font-weight:650;letter-spacing:.2px}
+.dot{width:11px;height:11px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 14px var(--accent);transition:all .4s}
+.owner-dot{background:var(--warm);box-shadow:0 0 14px var(--warm)}
+
+/* ── App shell ────────────────────────────────────────────── */
+.wrap{max-width:860px;margin:0 auto;padding:22px 18px 60px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;
+  flex-wrap:wrap;gap:10px}
+.right{display:flex;align-items:center;gap:14px;font-size:.82rem;color:var(--muted)}
+.who{color:var(--muted)}
+.navlink{color:var(--muted);text-decoration:none}
+.navlink:hover{color:var(--text)}
+.status{display:inline-flex;align-items:center;gap:7px}
+.status .pulse{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.status.live .pulse{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+
+/* ── Hero reading ─────────────────────────────────────────── */
+.hero{position:relative;border:1px solid var(--line);border-radius:18px;
+  padding:26px 26px 22px;overflow:hidden;transition:background .5s;
+  background:radial-gradient(700px 280px at 80% -40%,
+      color-mix(in srgb, var(--accent) 22%, transparent) 0%, transparent 70%),
+    var(--panel)}
+.hero .eyebrow{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.reading{display:flex;align-items:flex-end;gap:6px;margin-top:6px}
+.reading .val{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:5.2rem;line-height:.92;font-weight:600;
+  font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.reading .unit{font-size:1.4rem;color:var(--muted);margin-bottom:12px}
+.mode-line{margin-top:10px;font-size:.92rem;color:var(--accent);font-weight:550}
+
+/* ── Tiles ────────────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.tile .k{font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tile .v{margin-top:8px;font-size:1.7rem;font-weight:600;font-variant-numeric:tabular-nums}
+.tile .v small{font-size:.95rem;color:var(--muted);font-weight:500}
+.chip{display:inline-flex;align-items:center;gap:7px;margin-top:8px;
+  padding:5px 11px;border-radius:999px;font-size:.9rem;font-weight:600}
+.chip.clear{background:rgba(52,211,153,.12);color:var(--ok)}
+.chip.fire{background:rgba(244,63,94,.14);color:var(--alert);
+  animation:flash 1s steps(2,start) infinite}
+@keyframes flash{50%{opacity:.45}}
+
+/* ── Controls / panels ────────────────────────────────────── */
+.controls{margin-top:22px;background:var(--panel);border:1px solid var(--line);
+  border-radius:16px;padding:20px}
+.controls h2{margin:0 0 4px;font-size:.95rem;font-weight:600}
+.controls .hint{margin:0 0 16px;color:var(--muted);font-size:.82rem}
+.modes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.modes.disabled{opacity:.4;pointer-events:none}
+.modes button{padding:12px 6px;border-radius:11px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--text);font-weight:600;font-size:.9rem;
+  cursor:pointer;transition:all .15s}
+.modes button:hover{border-color:var(--muted)}
+.modes button.active{border-color:var(--accent);color:var(--text);
+  background:color-mix(in srgb,var(--accent) 16%,var(--panel2))}
+.thr{margin-top:18px}
+.thr .row{display:flex;align-items:center;justify-content:space-between;
+  font-size:.85rem;color:var(--muted);margin-bottom:8px}
+.thr .row b{color:var(--text);font-variant-numeric:tabular-nums;font-size:1.05rem}
+input[type=range]{width:100%;accent-color:var(--cool)}
+.thr.disabled{opacity:.4;pointer-events:none}
+.readonly-note{margin-top:14px;color:var(--muted);font-size:.84rem}
+
+/* ── Accounts table (owner page) ──────────────────────────── */
+table.users{width:100%;border-collapse:collapse;margin-top:6px}
+table.users th{text-align:left;font-size:.74rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);font-weight:600;
+  padding:8px 8px;border-bottom:1px solid var(--line)}
+table.users td{padding:12px 8px;border-bottom:1px solid var(--line);font-size:.92rem}
+table.users td.muted{color:var(--muted)}
+table.users input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
+
+/* Toggle switch: a hidden checkbox driving a styled pill + thumb */
+.toggle{position:relative;display:inline-block;width:46px;height:26px;
+  cursor:pointer;flex-shrink:0}
+.toggle-track{position:absolute;inset:0;border-radius:999px;
+  background:var(--line);transition:background .18s ease}
+.toggle-track::before{content:"";position:absolute;top:3px;left:3px;
+  width:20px;height:20px;border-radius:50%;background:#cfd6dd;
+  box-shadow:0 1px 3px rgba(0,0,0,.4);transition:transform .18s ease,background .18s ease}
+.toggle input:checked + .toggle-track{background:var(--cool)}
+.toggle input:checked + .toggle-track::before{
+  transform:translateX(20px);background:#fff}
+.toggle input:focus-visible + .toggle-track{
+  outline:2px solid var(--cool);outline-offset:2px}
+.btn-del{padding:7px 12px;border-radius:9px;border:1px solid var(--line);
+  background:transparent;color:var(--alert);font-weight:600;cursor:pointer}
+.btn-del:hover{border-color:var(--alert);background:rgba(244,63,94,.1)}
+.btn-del:disabled{opacity:.35;cursor:not-allowed}
+
+@media (max-width:620px){
+  .reading .val{font-size:4rem}
+  .grid{grid-template-columns:1fr 1fr}
+  .modes{grid-template-columns:1fr 1fr}
+}

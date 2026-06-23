@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Casa{% endblock %}
+{% block body %}
+<div class="auth-screen">
+  <form class="card" method="post" action="{{ url_for('auth.login') }}">
+    <div class="brand"><span class="dot"></span><b>Casa</b></div>
+    <h1>Sign in</h1>
+    <p class="sub">Home climate control</p>
+
+    <label for="u">Username</label>
+    <input id="u" name="username" autocomplete="username" autofocus>
+
+    <label for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="current-password">
+
+    <button type="submit">Sign in</button>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+    <p class="alt">No account? <a href="{{ url_for('auth.signup') }}">Create one</a></p>
+  </form>
+</div>
+{% endblock %}

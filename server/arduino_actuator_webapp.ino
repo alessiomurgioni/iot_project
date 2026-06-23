@@ -1,4 +1,3 @@
-
 #include <SoftwareSerial.h>
 
 // ── Outputs ──────────────────────────────────────────────────────────────────
@@ -21,7 +20,7 @@ bool fireEventLatched = false;  // Prevents repeated FIRE messages restarting al
 bool windowOpen = false;
 bool peopleInside = false;
 
-// 0 = no temperature command yet
+// 0 = AC explicitly off (owner chose Off, or no command received yet)
 // 1 = cold air
 // 2 = hot air
 char requestedAcMode = '0';
@@ -82,10 +81,14 @@ void updateAirConditioning() {
     Serial.println("Hot air ON");
   }
 
-  // No temperature command received yet
+  // Explicitly off (owner chose Off) or no command received yet
   else {
     turnOffAirConditioning();
-    Serial.println("Waiting for temperature command");
+    if (requestedAcMode == '0') {
+      Serial.println("AC explicitly OFF (owner command)");
+    } else {
+      Serial.println("Waiting for temperature command");
+    }
   }
 }
 
@@ -198,6 +201,15 @@ void loop() {
       }
 
       linkSerial.println("ACK2");
+    }
+
+    // ── AC command: explicit off (owner chose "Off" on the dashboard) ────────
+    else if (received == "0") {
+      requestedAcMode = '0';
+      turnOffAirConditioning();
+      Serial.println("AC explicitly turned OFF by owner command");
+
+      linkSerial.println("ACK0");
     }
 
     // ── Fire detected ────────────────────────────────────────────────────────

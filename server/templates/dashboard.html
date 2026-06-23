@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Casa{% endblock %}
+{% block body %}
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="dot" id="dot"></span><b>Casa</b></div>
+    <div class="right">
+      <span class="status" id="status"><span class="pulse"></span><span id="statusTxt">connecting…</span></span>
+      <span class="who">{{ username }}</span>
+      <a class="navlink" href="{{ url_for('owner.unlock') }}">Manage</a>
+      <a class="navlink" href="{{ url_for('auth.logout') }}">Sign out</a>
+    </div>
+  </header>
+
+  <section class="hero" id="hero">
+    <div class="eyebrow">Indoor temperature</div>
+    <div class="reading">
+      <span class="val" id="indoor">--</span>
+      <span class="unit">°C</span>
+    </div>
+    <div class="mode-line" id="modeLine">—</div>
+  </section>
+
+  <div class="grid">
+    <div class="tile">
+      <div class="k">Outdoor</div>
+      <div class="v"><span id="outdoor">--</span><small> °C</small></div>
+    </div>
+    <div class="tile">
+      <div class="k">People inside</div>
+      <div class="v" id="people">--</div>
+    </div>
+    <div class="tile">
+      <div class="k">Fire alarm</div>
+      <span class="chip clear" id="fireChip">Clear</span>
+    </div>
+  </div>
+
+  <section class="controls">
+    <h2>Air conditioning</h2>
+    <p class="hint">Choose how the AC should behave. In Auto it cools above the
+       threshold and heats below it.</p>
+    <div class="modes" id="modes">
+      <button data-mode="auto">Auto</button>
+      <button data-mode="cool">Cool</button>
+      <button data-mode="heat">Heat</button>
+      <button data-mode="off">Off</button>
+    </div>
+    <p class="readonly-note" id="noControlNote" style="display:none">
+      Your account can view but not change AC settings.
+    </p>
+    <div class="thr" id="thrBox">
+      <div class="row"><span>Auto threshold</span><b><span id="thrVal">25.0</span> °C</b></div>
+      <input type="range" id="thr" min="10" max="35" step="0.5" value="25">
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

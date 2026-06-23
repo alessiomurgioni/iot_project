@@ -1,29 +1,27 @@
 #include <SoftwareSerial.h>
 #include <DHT.h>
 #include <ESP8266WiFi.h>
-#include <WiFiUdp.h>
+#include <ESP8266HTTPClient.h>
+#include <WiFiClient.h>
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  WiFi & CoAP configuration  –  EDIT THESE THREE LINES
+//  WiFi & webapp configuration  –  EDIT THESE LINES
 // ══════════════════════════════════════════════════════════════════════════════
-const char* WIFI_SSID     = "iPhone di Alessio";   // iPhone hotspot SSID
-const char* WIFI_PASSWORD = "alessio2";     // iPhone hotspot password
-const char* SERVER_IP     = "172.20.10.12";             // IP printed by the Python server
+const char* WIFI_SSID     = "iPhone di Alessio";     // iPhone hotspot SSID
+const char* WIFI_PASSWORD = "alessio2";              // iPhone hotspot password
+const char* SERVER_IP     = "172.20.10.12";          // IP printed by app.py at boot
+const uint16_t SERVER_PORT = 8000;                   // must match config.PORT
+
+// Must match config.DEVICE_TOKEN_HASH on the server (the server only stores a
+// hash of this; this is the same value flashed here and printed on the device).
+const char* DEVICE_TOKEN  = "node-secret-123";
 // ══════════════════════════════════════════════════════════════════════════════
-
-// CoAP constants
-const uint16_t COAP_PORT      = 5683;
-const uint16_t LOCAL_UDP_PORT = 5684;   // local port for UDP replies
-
-// CoAP message types / codes
-const uint8_t COAP_CON     = 0x40;  // Confirmable
-const uint8_t COAP_GET     = 0x01;
-const uint8_t COAP_ACK     = 0x60;
 
 // Timing
-const unsigned long COAP_INTERVAL_MS  = 15000UL;  // poll server every 15 s
-const unsigned long COAP_TIMEOUT_MS   =  5000UL;  // wait up to 5 s for response
-const unsigned long WIFI_RETRY_MS     =  5000UL;  // retry WiFi every 5 s
+const unsigned long OUTDOOR_POLL_MS = 15000UL;  // refresh outdoor temp every 15 s
+const unsigned long REPORT_INTERVAL_MS = 2000UL; // matches the old loop cadence
+const unsigned long HTTP_TIMEOUT_MS  =  5000UL;
+const unsigned long WIFI_RETRY_MS    =  5000UL;
 
 // ── DHT11 ─────────────────────────────────────────────────────────────────────
 #define DHTPIN    D4
@@ -49,19 +47,20 @@ const unsigned long REARM_TIME_MS       =  250;
 
 DHT dht(DHTPIN, DHTTYPE);
 SoftwareSerial linkSerial(NODE_RX, NODE_TX);
-WiFiUDP udp;
 
 // ── People-counter variables ───────────────────────────────────────────────────
 int  peopleInside  = 0;
 unsigned long totalEntries = 0;
 unsigned long totalExits   = 0;
 
-// ── External temperature (from CoAP server) ───────────────────────────────────
+// ── External temperature (pulled from the webapp) ──────────────────────────────
 float externalTemperature = NAN;
-unsigned long lastCoapRequest = 0;
+unsigned long lastOutdoorPoll = 0;
 
-// ── CoAP message ID ───────────────────────────────────────────────────────────
-uint16_t coapMsgId = 1;
+// ── Owner's desired AC behaviour (pulled from the webapp) ─────────────────────
+// mode: "auto" | "cool" | "heat" | "off"
+String acMode      = "auto";
+float  acThreshold  = 25.0;
 
 
 // ── Sensor debouncing ─────────────────────────────────────────────────────────
@@ -117,105 +116,95 @@ void connectWiFi() {
 }
 
 
-// ── Minimal CoAP GET builder ──────────────────────────────────────────────────
-//
-// CoAP packet layout (RFC 7252):
-//   Byte 0    : Ver(2b)=01 | T(2b) | TKL(4b)
-//   Byte 1    : Code
-//   Bytes 2-3 : Message ID
-//   Bytes 4.. : Token (TKL bytes)
-//   Then options, then payload
-//
-// Resource: /sensor/temperature
-//   Option 11 (Uri-Path) "sensor"       delta=11, len=6
-//   Option 11 (Uri-Path) "temperature"  delta= 0, len=11
-//
-int buildCoapGet(uint8_t* buf, uint16_t msgId) {
-  int idx = 0;
+// ── Small JSON value extractor ─────────────────────────────────────────────────
+// Minimal helper: pulls the value for "key" out of a flat JSON object string
+// like {"mode":"auto","threshold":25.0}. Good enough for our own server's
+// fixed-shape replies; not a general JSON parser.
+String jsonString(const String& body, const char* key) {
+  String needle = String("\"") + key + "\":\"";
+  int i = body.indexOf(needle);
+  if (i < 0) return "";
+  i += needle.length();
+  int end = body.indexOf('"', i);
+  if (end < 0) return "";
+  return body.substring(i, end);
+}
 
-  // Header: Ver=1, Type=CON(0), TKL=0
-  buf[idx++] = 0x40;
-  buf[idx++] = COAP_GET;
-  buf[idx++] = (msgId >> 8) & 0xFF;
-  buf[idx++] = msgId & 0xFF;
-
-  // Option 11 (Uri-Path) = "sensor"  (delta=11, len=6)
-  buf[idx++] = 0xB6;  // delta=11, len=6
-  memcpy(&buf[idx], "sensor", 6); idx += 6;
-
-  // Option 11 (Uri-Path) = "temperature"  (delta=0, len=11)
-  buf[idx++] = 0x0B;  // delta=0, len=11
-  memcpy(&buf[idx], "temperature", 11); idx += 11;
-
-  return idx;
+float jsonNumber(const String& body, const char* key) {
+  String needle = String("\"") + key + "\":";
+  int i = body.indexOf(needle);
+  if (i < 0) return NAN;
+  i += needle.length();
+  return body.substring(i).toFloat();
 }
 
 
-// ── Send CoAP GET and wait for the response ───────────────────────────────────
-//
-// Sends one UDP datagram to SERVER_IP:5683 and blocks for up to
-// COAP_TIMEOUT_MS waiting for a reply. On success the payload is
-// parsed as a float and stored in externalTemperature.
-//
-void requestExternalTemperature() {
-  if (WiFi.status() != WL_CONNECTED) {
-    Serial.println("[CoAP] WiFi not connected – skipping request");
-    return;
-  }
+// ── HTTP helpers to the Flask webapp ────────────────────────────────────────────
 
-  uint8_t packet[64];
-  int len = buildCoapGet(packet, coapMsgId++);
+// GET /api/outdoor-temp?token=...  ->  {"outdoor_temp": 27.3}
+void fetchOutdoorTemperature() {
+  if (WiFi.status() != WL_CONNECTED) return;
 
-  udp.beginPacket(SERVER_IP, COAP_PORT);
-  udp.write(packet, len);
-  udp.endPacket();
+  WiFiClient client;
+  HTTPClient http;
+  String url = String("http://") + SERVER_IP + ":" + SERVER_PORT +
+               "/api/outdoor-temp?token=" + DEVICE_TOKEN;
 
-  Serial.print("[CoAP] GET coap://");
-  Serial.print(SERVER_IP);
-  Serial.println(":5683/sensor/temperature");
-
-  // Wait for ACK / response
-  unsigned long start = millis();
-  while (millis() - start < COAP_TIMEOUT_MS) {
-    int pktSize = udp.parsePacket();
-    if (pktSize > 0) {
-      uint8_t reply[128];
-      int n = udp.read(reply, sizeof(reply));
-
-      if (n < 4) break;  // malformed
-
-      uint8_t code = reply[1];
-      // 2.05 Content = 0x45
-      if (code == 0x45 && n > 4) {
-        // Skip header (4 bytes) + token (TKL bytes) + options
-        // The server sends no token and no options, so payload starts at byte 4.
-        // Find the payload marker 0xFF if present.
-        int payloadStart = 4;
-        for (int i = 4; i < n; i++) {
-          if (reply[i] == 0xFF) { payloadStart = i + 1; break; }
-        }
-
-        char payloadStr[32] = {0};
-        int payloadLen = n - payloadStart;
-        if (payloadLen > 0 && payloadLen < (int)sizeof(payloadStr)) {
-          memcpy(payloadStr, &reply[payloadStart], payloadLen);
-          externalTemperature = atof(payloadStr);
-          Serial.print("[CoAP] External temperature: ");
-          Serial.print(externalTemperature, 1);
-          Serial.println(" °C");
-        }
-      } else {
-        // Print raw payload for debugging
-        Serial.print("[CoAP] Response code: 0x");
-        Serial.println(code, HEX);
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  if (http.begin(client, url)) {
+    int code = http.GET();
+    if (code == 200) {
+      String body = http.getString();
+      float t = jsonNumber(body, "outdoor_temp");
+      if (!isnan(t)) {
+        externalTemperature = t;
+        Serial.print("[HTTP] Outdoor temperature: ");
+        Serial.print(externalTemperature, 1);
+        Serial.println(" C");
       }
-      break;
+    } else if (code == 503) {
+      Serial.println("[HTTP] Outdoor temperature not available yet");
+    } else {
+      Serial.print("[HTTP] outdoor-temp request failed, code ");
+      Serial.println(code);
     }
-    delay(10);
+    http.end();
+  } else {
+    Serial.println("[HTTP] Could not start outdoor-temp request");
   }
+}
 
-  if (millis() - start >= COAP_TIMEOUT_MS) {
-    Serial.println("[CoAP] Timeout – no response from server");
+// POST /api/report?token=...&indoor=...&people=...&fire=...&ac=...
+// Replies with {"mode":"...","threshold":...} so we refresh acMode/acThreshold
+// in the same round-trip.
+void reportToServer(float indoorTemp, bool fireNow, const char* acBlowing) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  WiFiClient client;
+  HTTPClient http;
+  String url = String("http://") + SERVER_IP + ":" + SERVER_PORT +
+               "/api/report?token=" + DEVICE_TOKEN +
+               "&indoor=" + String(indoorTemp, 1) +
+               "&people=" + String(peopleInside) +
+               "&fire="   + (fireNow ? "1" : "0") +
+               "&ac="     + acBlowing;
+
+  http.setTimeout(HTTP_TIMEOUT_MS);
+  if (http.begin(client, url)) {
+    int code = http.POST("");
+    if (code == 200) {
+      String body = http.getString();
+      String newMode = jsonString(body, "mode");
+      float newThreshold = jsonNumber(body, "threshold");
+      if (newMode.length() > 0) acMode = newMode;
+      if (!isnan(newThreshold)) acThreshold = newThreshold;
+    } else {
+      Serial.print("[HTTP] report failed, code ");
+      Serial.println(code);
+    }
+    http.end();
+  } else {
+    Serial.println("[HTTP] Could not start report request");
   }
 }
 
@@ -359,12 +348,9 @@ void setup() {
   // Connect to iPhone hotspot
   connectWiFi();
 
-  // Open local UDP socket for CoAP
-  udp.begin(LOCAL_UDP_PORT);
-
-  // First CoAP request immediately after boot
-  requestExternalTemperature();
-  lastCoapRequest = millis();
+  // First outdoor-temperature fetch immediately after boot
+  fetchOutdoorTemperature();
+  lastOutdoorPoll = millis();
 
   Serial.println("NodeMCU ready");
   Serial.println("Person counter started – inside: 0");
@@ -384,16 +370,15 @@ void loop() {
     }
   }
 
-  // ── 1. CoAP request every 15 seconds ──────────────────────────────────────
-  if (millis() - lastCoapRequest >= COAP_INTERVAL_MS) {
-    lastCoapRequest = millis();
-    requestExternalTemperature();
+  // ── 1. Outdoor temperature, every 15 seconds ──────────────────────────────
+  if (millis() - lastOutdoorPoll >= OUTDOOR_POLL_MS) {
+    lastOutdoorPoll = millis();
+    fetchOutdoorTemperature();
 
-    // Print external temperature summary
     if (!isnan(externalTemperature)) {
-      Serial.print("[EXT TEMP] Current outdoor temperature in Cagliari: ");
+      Serial.print("[EXT TEMP] Current outdoor temperature: ");
       Serial.print(externalTemperature, 1);
-      Serial.println(" °C");
+      Serial.println(" C");
     }
   }
 
@@ -409,16 +394,36 @@ void loop() {
     return;
   }
 
-  char signalToSend = (temp > 25.0) ? '1' : '2';
+  // ── 4. Decide what the AC should do, based on the owner's chosen mode ─────
+  // signalToSend: '1' = cold air, '2' = hot air, '0' = explicit off, 0 = nothing
+  char signalToSend = 0;
+  const char* acBlowing = "off";
 
-  linkSerial.println(signalToSend);
+  if (peopleInside <= 0) {
+    acBlowing = "off";  // Arduino auto-offs when nobody is inside; nothing to send
+  } else if (acMode == "cool") {
+    acBlowing = "cool"; signalToSend = '1';
+  } else if (acMode == "heat") {
+    acBlowing = "heat"; signalToSend = '2';
+  } else if (acMode == "off") {
+    acBlowing = "off";  signalToSend = '0';
+  } else /* auto */ {
+    if (temp > acThreshold) { acBlowing = "cool"; signalToSend = '1'; }
+    else                    { acBlowing = "heat"; signalToSend = '2'; }
+  }
+
+  if (signalToSend) {
+    linkSerial.println(signalToSend);
+  }
 
   Serial.print("[DHT11]   Indoor temperature: ");
   Serial.print(temp);
-  Serial.print(" °C | Sent to Arduino: ");
-  Serial.println(signalToSend);
+  Serial.print(" C | AC mode: ");
+  Serial.print(acMode);
+  Serial.print(" | Sent to Arduino: ");
+  Serial.println(signalToSend ? String(signalToSend) : String("(none)"));
 
-  // ── 4. Wait for ACK from Arduino ──────────────────────────────────────────
+  // ── 5. Wait for ACK from Arduino ──────────────────────────────────────────
   unsigned long startTime = millis();
   String ack = "";
 
@@ -438,7 +443,7 @@ void loop() {
     Serial.println("No ACK received");
   }
 
-  // ── 5. IR Flame sensor check ───────────────────────────────────────────────
+  // ── 6. IR Flame sensor check ───────────────────────────────────────────────
   bool fireDetected = (digitalRead(IR_FLAME_PIN) == LOW);
 
   if (fireDetected) {
@@ -465,7 +470,10 @@ void loop() {
     }
   }
 
-  // ── 6. Short delay (non-blocking) ─────────────────────────────────────────
+  // ── 7. Report current state to the webapp (also refreshes mode/threshold) ──
+  reportToServer(temp, fireDetected, acBlowing);
+
+  // ── 8. Short delay (non-blocking) ─────────────────────────────────────────
   unsigned long delayStart = millis();
   while (millis() - delayStart < 2000) {
     updatePeopleCounter();

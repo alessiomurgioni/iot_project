@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Owner unlock · Casa{% endblock %}
+{% block body %}
+<div class="auth-screen">
+  <form class="card" method="post" action="{{ url_for('owner.unlock') }}">
+    <div class="brand"><span class="dot owner-dot"></span><b>Casa</b></div>
+    <h1>Owner access</h1>
+    <p class="sub">Enter the owner key to manage accounts. This is separate
+       from your account password and from the device token.</p>
+
+    <label for="k">Owner key</label>
+    <input id="k" name="owner_key" type="password" autocomplete="off" autofocus>
+
+    <button type="submit">Unlock</button>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+    <p class="alt"><a href="{{ url_for('views.dashboard') }}">Back to dashboard</a></p>
+  </form>
+</div>
+{% endblock %}

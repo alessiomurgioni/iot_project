@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Create account · Casa{% endblock %}
+{% block body %}
+<div class="auth-screen">
+  <form class="card" method="post" action="{{ url_for('auth.signup') }}">
+    <div class="brand"><span class="dot"></span><b>Casa</b></div>
+    <h1>Create account</h1>
+    <p class="sub">You'll need the device token, printed on your unit, to register.</p>
+
+    <label for="u">Username</label>
+    <input id="u" name="username" autocomplete="username" autofocus>
+
+    <label for="p">Password</label>
+    <input id="p" name="password" type="password" autocomplete="new-password">
+
+    <label for="c">Confirm password</label>
+    <input id="c" name="confirm" type="password" autocomplete="new-password">
+
+    <label for="t">Device token</label>
+    <input id="t" name="device_token" autocomplete="off" placeholder="Printed on your device" required>
+
+    <button type="submit">Create account</button>
+    {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+    <p class="alt">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+  </form>
+</div>
+{% endblock %}
