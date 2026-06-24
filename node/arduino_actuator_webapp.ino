@@ -36,6 +36,10 @@ unsigned long lastBlinkTime = 0;
 bool yellowState = false;
 
 
+// ── Air conditioning helpers (forward declaration) ───────────────────────────
+void turnOffAirConditioning();
+
+
 // ── Window helper ────────────────────────────────────────────────────────────
 void setWindow(bool open) {
   windowOpen = open;
@@ -43,6 +47,8 @@ void setWindow(bool open) {
 
   if (open) {
     Serial.println("Window OPENED");
+    // Rule: if the windows are open, the AC must be off.
+    turnOffAirConditioning();
   } else {
     Serial.println("Window CLOSED");
   }
@@ -62,6 +68,13 @@ void updateAirConditioning() {
   // Do not run AC if nobody is inside
   if (!peopleInside) {
     turnOffAirConditioning();
+    return;
+  }
+
+  // Do not run AC while the windows are open
+  if (windowOpen) {
+    turnOffAirConditioning();
+    Serial.println("AC held off: windows are open");
     return;
   }
 
@@ -180,7 +193,7 @@ void loop() {
       requestedAcMode = '1';
 
       if (peopleInside) {
-        updateAirConditioning();
+        updateAirConditioning();   // also respects the windows-open rule
       } else {
         turnOffAirConditioning();
         Serial.println("Cold-air request saved, but nobody is inside");
@@ -194,7 +207,7 @@ void loop() {
       requestedAcMode = '2';
 
       if (peopleInside) {
-        updateAirConditioning();
+        updateAirConditioning();   // also respects the windows-open rule
       } else {
         turnOffAirConditioning();
         Serial.println("Hot-air request saved, but nobody is inside");
@@ -233,7 +246,29 @@ void loop() {
       Serial.println("System re-armed for a future fire event");
     }
 
-    // ── Window toggle ────────────────────────────────────────────────────────
+    // ── Window: explicit OPEN ────────────────────────────────────────────────
+    else if (received == "WINDOW_OPEN") {
+      // Never open windows during a fire.
+      if (fireActive) {
+        Serial.println("WINDOW_OPEN ignored: fire alarm is active");
+        linkSerial.println("ACK_WINDOW_BLOCKED");
+      } else {
+        setWindow(true);   // opening also forces the AC off (see setWindow)
+        linkSerial.println("ACK_WINDOW_OPEN");
+      }
+    }
+
+    // ── Window: explicit CLOSE ───────────────────────────────────────────────
+    else if (received == "WINDOW_CLOSED") {
+      setWindow(false);
+      // Closing the windows lets AC resume on the next mode command.
+      if (peopleInside) {
+        updateAirConditioning();
+      }
+      linkSerial.println("ACK_WINDOW_CLOSED");
+    }
+
+    // ── Window toggle (legacy / manual) ──────────────────────────────────────
     else if (received == "WINDOW") {
       // Do not allow window opening while fire is active
       if (fireActive && !windowOpen) {
@@ -245,6 +280,7 @@ void loop() {
         if (windowOpen) {
           linkSerial.println("ACK_WINDOW_OPEN");
         } else {
+          if (peopleInside) updateAirConditioning();
           linkSerial.println("ACK_WINDOW_CLOSED");
         }
       }

@@ -5,7 +5,6 @@ from auth import login_required
 
 views_bp = Blueprint("views", __name__)
 
-
 @views_bp.route("/")
 @login_required
 def dashboard():

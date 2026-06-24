@@ -4,6 +4,11 @@ Live house state held in memory.
 Sensor readings are ephemeral and high-frequency, so they live here rather than
 in MongoDB (Mongo only stores accounts). A background thread refreshes the
 outdoor temperature from open-meteo.
+
+This module is the single source of truth for what the owner wants the house to
+do (`_control`: AC mode + threshold + window command). The NodeMCU pulls
+`_control` and acts on it; it pushes back the actual measured state via
+`update_from_device`.
 """
 import threading
 import time
@@ -21,12 +26,14 @@ _state = {
     "fire":          False,
     "ac_blowing":    "off",   # what the AC is actually doing: cool | heat | off
     "last_report":   None,    # epoch seconds of the last device report
+    "windows":       "closed",# ACTUAL window state reported by the device: open | closed
 }
 
-# What the owner wants the AC to do; the NodeMCU pulls this and acts on it.
+# What the owner wants; the NodeMCU pulls this and acts on it.
 _control = {
     "mode":      "auto",      # auto | cool | heat | off
     "threshold": 25.0,        # auto: cool above this temp, heat below it
+    "window":    "close",     # desired window command: open | close
 }
 
 
@@ -42,15 +49,34 @@ def is_online() -> bool:
     return last is not None and (time.time() - last) <= config.STALE_AFTER_S
 
 
-def set_control(mode=None, threshold=None):
+def set_control(mode=None, threshold=None, window=None):
+    """
+    Apply an owner command. Each call is "last write wins": this is what makes
+    the empty-house auto-off in update_from_device overridable -- a webapp
+    command that arrives afterwards simply replaces it.
+    """
     with _lock:
-        if mode in ("auto", "cool", "heat", "off"):
-            _control["mode"] = mode
-        if threshold is not None:
-            try:
-                _control["threshold"] = max(10.0, min(35.0, float(threshold)))
-            except (TypeError, ValueError):
-                pass
+        # Apply the window command first -- it decides whether the AC may change.
+        if window in ("open", "close"):
+            _control["window"] = window
+            # Opening the windows forces the AC off (also enforced physically on
+            # the Arduino). Reflect it here so the dashboard shows reality.
+            if window == "open":
+                _control["mode"] = "off"
+
+        # The AC can only be changed while the windows are CLOSED. While they
+        # are open it stays forced off and any mode/threshold change is ignored.
+        # The dashboard greys the section out, but enforce it here too so a
+        # direct API call can't bypass the lock.
+        if _control["window"] == "close":
+            if mode in ("auto", "cool", "heat", "off"):
+                _control["mode"] = mode
+            if threshold is not None:
+                try:
+                    _control["threshold"] = max(10.0, min(35.0, float(threshold)))
+                except (TypeError, ValueError):
+                    pass
+
         return dict(_control)
 
 
@@ -65,22 +91,44 @@ def outdoor_temp():
         return _state["outdoor_temp"]
 
 
-def update_from_device(indoor=None, people=None, fire=None, ac=None):
+def update_from_device(indoor=None, people=None, fire=None, ac=None, windows=None):
     with _lock:
+        prev_people = _state["people_inside"]
+
         if indoor not in (None, ""):
             try:
                 _state["indoor_temp"] = float(indoor)
             except ValueError:
                 pass
+
         if people not in (None, ""):
             try:
-                _state["people_inside"] = int(float(people))
+                new_people = int(float(people))
+                _state["people_inside"] = new_people
+                # Edge trigger: the house just emptied (>=1 -> 0).
+                # Turn the AC off and close the windows. This is a ONE-SHOT
+                # default, not a lock: a later webapp command (set_control)
+                # overwrites _control and "goes through".
+                if prev_people >= 1 and new_people == 0:
+                    _control["mode"] = "off"
+                    _control["window"] = "close"
             except ValueError:
                 pass
+
         if fire not in (None, ""):
-            _state["fire"] = fire in ("1", "true", "True")
+            fire_on = fire in ("1", "true", "True")
+            _state["fire"] = fire_on
+            # Fire => windows must be closed (the Arduino also does this on its
+            # own; we set the command so the desired state stays consistent).
+            if fire_on:
+                _control["window"] = "close"
+
         if ac in ("cool", "heat", "off"):
             _state["ac_blowing"] = ac
+
+        if windows in ("open", "closed"):
+            _state["windows"] = windows
+
         _state["last_report"] = time.time()
         return dict(_control)
 

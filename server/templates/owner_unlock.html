@@ -9,12 +9,18 @@
        from your account password and from the device token.</p>
 
     <label for="k">Owner key</label>
-    <input id="k" name="owner_key" type="password" autocomplete="off" autofocus>
+    <div class="field-wrap">
+      <input id="k" name="owner_key" type="password" autocomplete="off" autofocus>
+    </div>
 
     <button type="submit">Unlock</button>
     {% if error %}<div class="err">{{ error }}</div>{% endif %}
 
-    <p class="alt"><a href="{{ url_for('views.dashboard') }}">Back to dashboard</a></p>
+    <p class="alt"><a href="{{ url_for('views.dashboard') }}">Back to Dashboard</a></p>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/password_toggle.js') }}"></script>
 {% endblock %}

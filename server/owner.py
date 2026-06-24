@@ -1,21 +1,8 @@
-"""
-Owner management: unlocking with the owner key, the management page, and the
-API routes for viewing/removing accounts and granting or revoking their
-ability to control the AC.
-
-The owner key is a secret separate from the device token, never tied to a
-specific account, and never stored anywhere except as a hash (see
-config.OWNER_KEY_HASH). Proving it unlocks session["owner"] for the current
-browser session only -- logging out, or starting a new session, requires
-entering it again.
-"""
 from flask import (
     Blueprint, jsonify, redirect, render_template, request, session, url_for
 )
-
 import db
-import security
-from auth import login_required, owner_required
+from auth import login_required, owner_required, verify_owner_key
 
 owner_bp = Blueprint("owner", __name__, url_prefix="/owner")
 
@@ -26,7 +13,7 @@ def unlock():
     error = None
     if request.method == "POST":
         key = request.form.get("owner_key", "")
-        if security.verify_owner_key(key):
+        if verify_owner_key(key):
             session["owner"] = True
             return redirect(url_for("owner.manage"))
         error = "Incorrect owner key."

@@ -11,13 +11,20 @@
     <input id="u" name="username" autocomplete="username" autofocus>
 
     <label for="p">Password</label>
-    <input id="p" name="password" type="password" autocomplete="new-password">
+    <div class="field-wrap">
+      <input id="p" name="password" type="password" autocomplete="new-password">
+    </div>
 
     <label for="c">Confirm password</label>
-    <input id="c" name="confirm" type="password" autocomplete="new-password">
+    <div class="field-wrap">
+      <input id="c" name="confirm" type="password" autocomplete="new-password">
+    </div>
 
     <label for="t">Device token</label>
-    <input id="t" name="device_token" autocomplete="off" placeholder="Printed on your device" required>
+    <div class="field-wrap">
+      <input id="t" name="device_token" type="password" autocomplete="off"
+             placeholder="Printed on your device" required>
+    </div>
 
     <button type="submit">Create account</button>
     {% if error %}<div class="err">{{ error }}</div>{% endif %}
@@ -25,4 +32,8 @@
     <p class="alt">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/password_toggle.js') }}"></script>
 {% endblock %}

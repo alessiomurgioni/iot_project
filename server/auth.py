@@ -12,13 +12,12 @@ Session keys:
     session["owner"]  -> True once the owner key has been unlocked this session
 """
 from functools import wraps
-
+from werkzeug.security import check_password_hash
+import config
 from flask import (
     Blueprint, redirect, render_template, request, session, url_for, jsonify
 )
-
 import db
-import security
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -32,6 +31,7 @@ def login_required(f):
                 return jsonify({"error": "unauthorized"}), 401
             return redirect(url_for("auth.login"))
         return f(*args, **kwargs)
+
     return wrapper
 
 
@@ -47,7 +47,30 @@ def owner_required(f):
                 return jsonify({"error": "owner key required"}), 403
             return redirect(url_for("owner.unlock"))
         return f(*args, **kwargs)
+
     return wrapper
+
+# -- Token Management -----------------------------------------------------------------
+def verify_device_token(token: str) -> bool:
+    if not token:
+        return False
+    if token in _verified_tokens:
+        return True
+    if check_password_hash(config.DEVICE_TOKEN_HASH, token):
+        _verified_tokens.add(token)
+        return True
+    return False
+
+
+def verify_owner_key(key: str) -> bool:
+    if not key:
+        return False
+    if key in _verified_owner_keys:
+        return True
+    if check_password_hash(config.OWNER_KEY_HASH, key):
+        _verified_owner_keys.add(key)
+        return True
+    return False
 
 
 # -- Routes ----------------------------------------------------------------------
@@ -71,10 +94,10 @@ def signup():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-        confirm  = request.form.get("confirm", "")
-        token    = request.form.get("device_token", "").strip()
+        confirm = request.form.get("confirm", "")
+        token = request.form.get("device_token", "").strip()
 
-        if not token or not security.verify_device_token(token):
+        if not token or not verify_device_token(token):
             error = "A valid device token is required to register."
         elif not username or not password:
             error = "Username and password are required."
@@ -94,3 +117,7 @@ def signup():
 def logout():
     session.clear()
     return redirect(url_for("auth.login"))
+
+
+_verified_tokens = set()
+_verified_owner_keys = set()

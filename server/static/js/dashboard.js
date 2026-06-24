@@ -1,4 +1,4 @@
-// Dashboard: polls /api/state and sends AC control changes.
+// Dashboard: polls /api/state and sends AC + window control changes.
 
 const fmt = (v) =>
   (v === null || v === undefined || Number.isNaN(v)) ? "--" : Number(v).toFixed(1);
@@ -6,7 +6,9 @@ const accentFor = (b) =>
   b === "cool" ? "var(--cool)" : b === "heat" ? "var(--warm)" : "var(--muted)";
 const verb = { cool: "Cooling", heat: "Heating", off: "Idle" };
 
-let dragging = false; // don't overwrite the slider while the owner drags it
+let dragging = false;       // don't overwrite the slider while the owner drags it
+let canControl = true;      // permission: may change AC / windows at all
+let acControllable = true;  // permission AND windows are closed
 
 async function refresh() {
   try {
@@ -35,31 +37,57 @@ async function refresh() {
     if (s.online) { st.classList.add("live");    txt.textContent = "Device online"; }
     else          { st.classList.remove("live"); txt.textContent = "Device offline"; }
 
-    // controls
-    const modesEl = document.getElementById("modes");
-    const thrBox = document.getElementById("thrBox");
-    const note = document.getElementById("noControlNote");
-
-    if (!s.can_control) {
-      modesEl.classList.add("disabled");
-      thrBox.classList.add("disabled");
-      if (note) note.style.display = "block";
-    } else {
-      modesEl.classList.remove("disabled");
-      if (note) note.style.display = "none";
-    }
     canControl = !!s.can_control;
+    const windowsOpen = s.control.window === "open";
+    // The AC is controllable only when the user has permission AND the windows
+    // are closed. Open windows force the AC off and lock the section.
+    acControllable = canControl && !windowsOpen;
 
-    modesEl.querySelectorAll("button").forEach((b) =>
+    // ── AC controls ──────────────────────────────────────────────
+    const acModes = document.getElementById("modes_ac");
+    const thrBox  = document.getElementById("thrBox");
+    const acNote  = document.getElementById("noControlNote");
+
+    acModes.classList.toggle("disabled", !acControllable);
+
+    // Note text depends on WHY the AC is locked.
+    if (acNote) {
+      if (!canControl) {
+        acNote.textContent = "Your account can view but not change AC settings.";
+        acNote.style.display = "block";
+      } else if (windowsOpen) {
+        acNote.textContent =
+          "The AC is off while the windows are open. Close the windows to control it.";
+        acNote.style.display = "block";
+      } else {
+        acNote.style.display = "none";
+      }
+    }
+
+    acModes.querySelectorAll("button").forEach((b) =>
       b.classList.toggle("active", b.dataset.mode === s.control.mode));
-    thrBox.classList.toggle("disabled", s.control.mode !== "auto" || !s.can_control);
+
+    // Threshold is part of the AC section: locked when AC is locked, or when
+    // the mode isn't "auto".
+    thrBox.classList.toggle("disabled", s.control.mode !== "auto" || !acControllable);
     if (!dragging) {
       document.getElementById("thr").value = s.control.threshold;
       document.getElementById("thrVal").textContent =
         Number(s.control.threshold).toFixed(1);
     }
+
+    // ── Window controls ──────────────────────────────────────────
+    const winModes = document.getElementById("modes_win");
+    const winNote  = document.getElementById("noControlNote_win");
+
+    // Windows are gated only by permission, never by the AC state.
+    winModes.classList.toggle("disabled", !canControl);
+    if (winNote) winNote.style.display = canControl ? "none" : "block";
+
+    // Highlight off the desired command so the choice sticks immediately.
+    winModes.querySelectorAll("button").forEach((b) =>
+      b.classList.toggle("active", b.dataset.window === s.control.window));
   } catch (e) {
-    /* transient network error; next tick retries */
   }
 }
 
@@ -72,10 +100,13 @@ async function sendControl(payload) {
   if (r.ok) refresh();
 }
 
-let canControl = true; // updated by refresh(); guards clicks client-side only
+// AC mode buttons — only when permitted AND windows are closed
+document.querySelectorAll("#modes_ac button").forEach((b) =>
+  b.addEventListener("click", () => { if (acControllable) sendControl({ mode: b.dataset.mode }); }));
 
-document.querySelectorAll("#modes button").forEach((b) =>
-  b.addEventListener("click", () => { if (canControl) sendControl({ mode: b.dataset.mode }); }));
+// Window buttons — gated only by permission
+document.querySelectorAll("#modes_win button").forEach((b) =>
+  b.addEventListener("click", () => { if (canControl) sendControl({ window: b.dataset.window }); }));
 
 const thr = document.getElementById("thr");
 thr.addEventListener("input", () => {
@@ -84,7 +115,7 @@ thr.addEventListener("input", () => {
 });
 thr.addEventListener("change", () => {
   dragging = false;
-  if (canControl) sendControl({ threshold: parseFloat(thr.value) });
+  if (acControllable) sendControl({ threshold: parseFloat(thr.value) });
 });
 
 refresh();

@@ -11,7 +11,9 @@
     <input id="u" name="username" autocomplete="username" autofocus>
 
     <label for="p">Password</label>
-    <input id="p" name="password" type="password" autocomplete="current-password">
+    <div class="field-wrap">
+      <input id="p" name="password" type="password" autocomplete="current-password">
+    </div>
 
     <button type="submit">Sign in</button>
     {% if error %}<div class="err">{{ error }}</div>{% endif %}
@@ -19,4 +21,8 @@
     <p class="alt">No account? <a href="{{ url_for('auth.signup') }}">Create one</a></p>
   </form>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/password_toggle.js') }}"></script>
 {% endblock %}

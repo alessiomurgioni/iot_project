@@ -19,6 +19,15 @@ body{margin:0;min-height:100vh;color:var(--text);background:var(--ink);
 .card input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
   background:#0d1117;color:var(--text);font-size:.95rem}
 .card input:focus{outline:none;border-color:var(--cool)}
+.field-wrap{position:relative}
+.field-wrap input{padding-right:40px}
+.card button.toggle-visibility{
+  position:absolute;right:4px;top:50%;transform:translateY(-50%);
+  width:32px;height:32px;margin-top:0;border:0;background:transparent;
+  color:var(--muted);cursor:pointer;display:flex;align-items:center;
+  justify-content:center;border-radius:8px;padding:0;line-height:0}
+.card button.toggle-visibility svg{display:block}
+.card button.toggle-visibility:hover{color:var(--text);background:var(--panel2)}
 .card button{width:100%;margin-top:22px;padding:12px;border:0;border-radius:10px;
   background:var(--cool);color:#04222f;font-weight:650;font-size:.95rem;cursor:pointer}
 .card button:hover{filter:brightness(1.06)}
@@ -125,3 +134,10 @@ table.users input[type=checkbox]{position:absolute;opacity:0;width:0;height:0}
   .grid{grid-template-columns:1fr 1fr}
   .modes{grid-template-columns:1fr 1fr}
 }
+
+#modes_win button.active{
+  border-color:var(--cool);
+  color:var(--text);
+  background:color-mix(in srgb, var(--cool) 18%, var(--panel2));
+}
+

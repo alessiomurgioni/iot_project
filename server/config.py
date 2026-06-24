@@ -15,32 +15,15 @@ SECRET_KEY = os.environ.get("WEBAPP_SECRET", "change-me-to-a-long-random-string"
 PORT = int(os.environ.get("WEBAPP_PORT", "8000"))
 
 # -- Device token -------------------------------------------------------------
-# The token is NEVER stored in clear on the server, only as a hash. It is given
-# to the owner at purchase (printed on the device) and flashed into the NodeMCU.
-# Two uses, both verified against this single hash:
-#   1. The NodeMCU sends it with every /api/report and /api/command request.
-#   2. A person enters it at /signup to be granted the admin role.
-#
-# To set your own token, run:  python gen_token_hash.py
-# then paste the output here (or set the DEVICE_TOKEN_HASH env var).
-# The default below is the hash of "node-secret-123" -- change it for real use.
 DEVICE_TOKEN_HASH = os.environ.get(
     "DEVICE_TOKEN_HASH",
-    "pbkdf2:sha256:1000000$W1tmWFAlwjQAVho2$"
-    "d86943a58abee604799479ba92ccac62b98ff1b9e6ef2b09473fc67a44b609df",
+    "pbkdf2:sha256:1000000$W1tmWFAlwjQAVho2$d86943a58abee604799479ba92ccac62b98ff1b9e6ef2b09473fc67a44b609df",
 )
 
 # -- Owner key ------------------------------------------------------------------
-# A second, stronger secret, separate from the device token. Anyone who proves
-# they know it (via /owner/unlock) gets a session-scoped capability to manage
-# accounts: view the list, remove accounts, and grant/revoke their ability to
-# control the AC. It is NOT tied to any one account and is never stored in
-# clear, only as a hash -- generate your own with gen_token_hash.py.
-# The default below is the hash of "owner-master-456" -- change it for real use.
 OWNER_KEY_HASH = os.environ.get(
     "OWNER_KEY_HASH",
-    "pbkdf2:sha256:1000000$va6YH8HiyaIFVPHZ$"
-    "e927ec202631e5ca2db53af0aeef4db23d979dd864a74823d7be6446c0f8fd68",
+    "pbkdf2:sha256:1000000$va6YH8HiyaIFVPHZ$e927ec202631e5ca2db53af0aeef4db23d979dd864a74823d7be6446c0f8fd68",
 )
 
 # -- MongoDB ------------------------------------------------------------------
