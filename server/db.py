@@ -6,6 +6,7 @@ import config
 _client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=5000)
 _db = _client[config.MONGO_DB]
 users = _db["users"]
+house_state = _db["house_state"]
 
 try:
 
@@ -15,7 +16,7 @@ except Exception as exc:
           f"Is MongoDB running at {config.MONGO_URI}?")
 
 
-# ── DB Management Functions ────────────────────────────────────────────────
+# ── Users DB Management Functions ────────────────────────────────────────────────
 def get_user(username: str):
     """
     Returns the raw Mongo document for the given username (including the
@@ -79,3 +80,21 @@ def delete_user(username: str) -> int:
     - username: username
     """
     return users.delete_one({"username": username}).deleted_count
+
+# ── States DB Management Functions ────────────────────────────────────────────────
+def save_house_state(state: dict, control: dict):
+    """
+    Saves the house state to the database.
+
+    Inputs:
+    - state: copy of each state parameter
+    - control: copy of each control parameter
+    """
+    doc = {}
+    doc.update(state)
+    doc.update(control)
+    house_state.update_one(
+        {"_id": "latest"},
+        {"$set": doc},
+        upsert=True,
+    )

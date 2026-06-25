@@ -2,6 +2,7 @@ import threading
 import time
 import requests
 import config
+import db
 
 # ── Variables ──────────────────────────────────────────────────────────
 _lock = threading.Lock()
@@ -51,29 +52,33 @@ def set_control(mode=None, threshold=None, window=None):
     - mode: commanded AC working mode
     - threshold: commanded temperature threshold
     - window: commanded home's windows status
+
+    Output:
+    - result: a dictionary with the various control values
     """
     with _lock:
-
         if _state["fire"]:
             _control["mode"] = "off"
             _control["window"] = "close"
-            return dict(_control)
+        else:
+            if window in ("open", "close"):
+                _control["window"] = window
+                if window == "open":
+                    _control["mode"] = "off"
 
-        if window in ("open", "close"):
-            _control["window"] = window
-            if window == "open":
-                _control["mode"] = "off"
+            if _control["window"] == "close":
+                if mode in ("auto", "cool", "heat", "off"):
+                    _control["mode"] = mode
+                if threshold is not None:
+                    try:
+                        _control["threshold"] = max(10.0, min(35.0, float(threshold)))
+                    except (TypeError, ValueError):
+                        pass
 
-        if _control["window"] == "close":
-            if mode in ("auto", "cool", "heat", "off"):
-                _control["mode"] = mode
-            if threshold is not None:
-                try:
-                    _control["threshold"] = max(10.0, min(35.0, float(threshold)))
-                except (TypeError, ValueError):
-                    pass
+        result = dict(_control)
 
-        return dict(_control)
+    db.save_house_state(*snapshot())
+    return result
 
 
 def get_command():
@@ -110,6 +115,9 @@ def update_from_device(indoor=None, people=None, fire=None, ac=None, windows=Non
     - fire: flag that notifies if a fire is detected
     - ac: AC state
     - windows: home's windows status
+
+    Output:
+    - result: a dictionary with the various control values
     """
 
     with _lock:
@@ -145,7 +153,10 @@ def update_from_device(indoor=None, people=None, fire=None, ac=None, windows=Non
             _state["windows"] = windows
 
         _state["last_report"] = time.time()
-        return dict(_control)
+        result = dict(_control)
+
+    db.save_house_state(*snapshot())
+    return result
 
 
 # ── Outdoor temperature related functions ────────────────────────────────────────────────
