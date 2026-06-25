@@ -88,7 +88,11 @@ def api_accounts_delete():
     - username: the account to delete
     """
     data = request.get_json(silent=True) or request.form
-    target = (data.get("username") or "").strip()
+    raw_username = data.get("username")
+
+    if not isinstance(raw_username, str):
+        return jsonify({"error": "No username provided."}), 400
+    target = raw_username.strip()
 
     if not target:
         return jsonify({"error": "No username provided."}), 400
@@ -113,11 +117,13 @@ def api_accounts_permission():
     - can_control: whether the account may change AC/window settings
     """
     data = request.get_json(silent=True) or request.form
-    target = (data.get("username") or "").strip()
-    can_control = data.get("can_control")
+    raw_username = data.get("username")
 
-    if not target:
+    if not isinstance(raw_username, str):
         return jsonify({"error": "No username provided."}), 400
+    target = raw_username.strip()
+
+    can_control = data.get("can_control")
     if can_control is None:
         return jsonify({"error": "No can_control value provided."}), 400
 
@@ -125,6 +131,7 @@ def api_accounts_permission():
         can_control = can_control.strip().lower() in ("1", "true", "yes")
 
     matched = db.set_can_control(target, bool(can_control))
+
     if matched == 0:
         return jsonify({"error": "No such account."}), 404
     print(f"[OWNER] {session['user']} set can_control={bool(can_control)} for '{target}'")
