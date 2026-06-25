@@ -1,47 +1,44 @@
-"""
-MongoDB access layer for user accounts.
-
-Every account requires the device token at signup, so every account that
-exists is equally trusted to use the house -- but the owner (whoever holds the
-separate, stronger owner key) can manage accounts and decide, per account,
-whether it is allowed to change AC settings.
-
-Collection: domotics.users
-Document shape:
-    {
-        "username": "alice",
-        "password": "<werkzeug hash>",   # NEVER the raw password
-        "can_control": true              # may change AC mode/threshold
-    }
-"""
 from pymongo import MongoClient, ASCENDING
 from werkzeug.security import generate_password_hash, check_password_hash
-
 import config
 
-# serverSelectionTimeoutMS keeps the app from hanging forever if mongod is down;
-# the actual connection is lazy (made on first real query).
+# ── Database Connection Establishment ────────────────────────────────────────────────
 _client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=5000)
 _db = _client[config.MONGO_DB]
 users = _db["users"]
 
 try:
-    # Enforce unique usernames at the database level.
+
     users.create_index([("username", ASCENDING)], unique=True)
-except Exception as exc:  # mongod not reachable yet -- will surface on first use
+except Exception as exc:
     print(f"[DB] Warning: could not create index now ({exc}). "
           f"Is MongoDB running at {config.MONGO_URI}?")
 
 
-def user_count() -> int:
-    return users.count_documents({})
-
-
+# ── DB Management Functions ────────────────────────────────────────────────
 def get_user(username: str):
+    """
+    Returns the raw Mongo document for the given username (including the
+    password hash and can_control flag), or None if no such account exists.
+
+    Input:
+    - username: username to look for
+    """
     return users.find_one({"username": username})
 
 
 def create_user(username: str, password: str, can_control: bool = True):
+    """
+    Creates a new account: hashes the password and sets can_control,
+    which gates whether this account is allowed to change AC/window settings.
+    Defaults to True so a normal signup can control the house unless the owner later revokes it.
+
+    Inputs:
+    - username: username
+    - password: password
+    - can_control: whether this account is allowed to change AC/window settings
+
+    """
     users.insert_one({
         "username": username,
         "password": generate_password_hash(password),
@@ -49,20 +46,24 @@ def create_user(username: str, password: str, can_control: bool = True):
     })
 
 
-def verify_user(username: str, password: str):
-    """Return the user document if credentials are valid, else None."""
-    u = get_user(username)
-    if u and check_password_hash(u["password"], password):
-        return u
-    return None
-
-
 def list_users():
-    """All users, without password hashes or Mongo _id (JSON-safe)."""
+    """
+    Returns every account as a list of dicts, with the password
+    hash and Mongo _id stripped out. Used by the owner management page to
+    populate the accounts table.
+    """
     return list(users.find({}, {"password": 0, "_id": 0}))
 
 
 def set_can_control(username: str, can_control: bool) -> int:
+    """
+    Edits the can_control parameter to set whether the given account is allowed to change AC/window
+    settings.
+
+    Inputs:
+    - username: username
+    - can_control: whether the specified account is allowed to change AC/window settings
+    """
     result = users.update_one(
         {"username": username},
         {"$set": {"can_control": bool(can_control)}},
@@ -71,4 +72,10 @@ def set_can_control(username: str, can_control: bool) -> int:
 
 
 def delete_user(username: str) -> int:
+    """
+    Permanently removes the given account.
+
+    Input:
+    - username: username
+    """
     return users.delete_one({"username": username}).deleted_count

@@ -1,36 +1,44 @@
 {% extends "base.html" %}
-{% block title %}Create account · Casa{% endblock %}
+{% block title %}Create account - DHome by Netwatch{% endblock %}
 {% block body %}
 <div class="auth-screen">
-  <form class="card" method="post" action="{{ url_for('auth.signup') }}">
-    <div class="brand"><span class="dot"></span><b>Casa</b></div>
-    <h1>Create account</h1>
-    <p class="sub">You'll need the device token, printed on your unit, to register.</p>
+    <div class="auth-shell">
+        <div class="brand" style="margin-bottom: 10px">
+            <span class="dot"></span>
+            <b>DHome</b>
+        </div>
 
-    <label for="u">Username</label>
-    <input id="u" name="username" autocomplete="username" autofocus>
 
-    <label for="p">Password</label>
-    <div class="field-wrap">
-      <input id="p" name="password" type="password" autocomplete="new-password">
+        <form class="card" method="post" action="{{ url_for('auth.signup') }}">
+            <h1>Create account</h1>
+            <p class="sub">You'll need the device token to register.</p>
+
+            <label for="u">Username</label>
+            <input id="u" name="username" autocomplete="username" autofocus>
+
+            <label for="p">Password</label>
+            <div class="field-wrap">
+                <input id="p" name="password" type="password" autocomplete="new-password">
+            </div>
+
+            <label for="c">Confirm password</label>
+            <div class="field-wrap">
+                <input id="c" name="confirm" type="password" autocomplete="new-password">
+            </div>
+
+            <label for="t">Device token</label>
+            <div class="field-wrap">
+                <input id="t" name="device_token" type="password" autocomplete="off" required>
+            </div>
+
+            <button type="submit">Create account</button>
+            {% if error %}
+            <div class="err">{{ error }}</div>
+            {% endif %}
+
+            <p class="alt">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+        </form>
     </div>
-
-    <label for="c">Confirm password</label>
-    <div class="field-wrap">
-      <input id="c" name="confirm" type="password" autocomplete="new-password">
-    </div>
-
-    <label for="t">Device token</label>
-    <div class="field-wrap">
-      <input id="t" name="device_token" type="password" autocomplete="off"
-             placeholder="Printed on your device" required>
-    </div>
-
-    <button type="submit">Create account</button>
-    {% if error %}<div class="err">{{ error }}</div>{% endif %}
-
-    <p class="alt">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
-  </form>
 </div>
 {% endblock %}
 

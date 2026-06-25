@@ -1,30 +1,36 @@
 {% extends "base.html" %}
-{% block title %}Manage accounts · Casa{% endblock %}
+{% block title %}Manage DB - DHome by Netwatch{% endblock %}
 {% block body %}
 <div class="wrap">
-  <header>
-    <div class="brand"><span class="dot owner-dot"></span><b>Casa</b></div>
-    <div class="right">
-      <span class="who">{{ username }} · Management</span>
-      <a class="navlink" href="{{ url_for('views.dashboard') }}">Dashboard</a>
-      <a class="navlink" href="{{ url_for('owner.lock') }}">Lock</a>
-    </div>
-  </header>
+    <header>
+        <div class="brand"><span class="dot"></span><b>DHome</b></div>
+        <div class="right">
+            <span class="status" id="status"><span class="pulse"></span><span id="statusTxt">connecting…</span></span>
+            <span class="who">{{ username }}</span>
+            <a class="navlink" href="{{ url_for('dashboard') }}">Dashboard</a>
+        </div>
+    </header>
 
-  <section class="controls">
-    <h2>Accounts</h2>
-    <p class="hint">Remove an account, or toggle whether it can change AC
-       settings. Viewing the dashboard is always available to every account.</p>
-    <table class="users" id="usersTable">
-      <thead>
-        <tr><th>Username</th><th>Can control AC</th><th></th></tr>
-      </thead>
-      <tbody id="usersBody">
-        <tr><td colspan="3" class="muted">Loading…</td></tr>
-      </tbody>
-    </table>
-    <div class="err" id="ownerErr" style="display:none"></div>
-  </section>
+    <section class="controls">
+        <h2>Accounts</h2>
+        <p class="hint">Remove an account, or toggle privileges: whether it can change AC / Windows
+            settings. Viewing the dashboard is always available to every account.</p>
+        <table class="users" id="usersTable">
+            <thead>
+            <tr>
+                <th>Username</th>
+                <th>Can control AC / Windows</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody id="usersBody">
+            <tr>
+                <td colspan="3" class="muted">Loading…</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="err" id="ownerErr" style="display:none"></div>
+    </section>
 </div>
 {% endblock %}
 

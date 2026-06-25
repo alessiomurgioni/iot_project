@@ -1,23 +1,32 @@
 {% extends "base.html" %}
-{% block title %}Owner unlock · Casa{% endblock %}
+{% block title %}Owner unlock - DHome by Netwatch{% endblock %}
 {% block body %}
+
+
 <div class="auth-screen">
-  <form class="card" method="post" action="{{ url_for('owner.unlock') }}">
-    <div class="brand"><span class="dot owner-dot"></span><b>Casa</b></div>
-    <h1>Owner access</h1>
-    <p class="sub">Enter the owner key to manage accounts. This is separate
-       from your account password and from the device token.</p>
 
-    <label for="k">Owner key</label>
-    <div class="field-wrap">
-      <input id="k" name="owner_key" type="password" autocomplete="off" autofocus>
+    <div class="auth-shell">
+        <div class="brand" style="margin-bottom: 10px">
+            <span class="dot"></span>
+            <b>DHome</b>
+        </div>
+        <form class="card" method="post" action="{{ url_for('owner.unlock') }}">
+            <h1>Owner access</h1>
+            <p class="sub">Enter the owner key to manage accounts.</p>
+
+            <label for="k">Owner key</label>
+            <div class="field-wrap">
+                <input id="k" name="owner_key" type="password" autocomplete="off" autofocus>
+            </div>
+
+            <button type="submit">Unlock</button>
+            {% if error %}
+            <div class="err">{{ error }}</div>
+            {% endif %}
+
+            <p class="alt"><a href="{{ url_for('dashboard') }}">Back to Dashboard</a></p>
+        </form>
     </div>
-
-    <button type="submit">Unlock</button>
-    {% if error %}<div class="err">{{ error }}</div>{% endif %}
-
-    <p class="alt"><a href="{{ url_for('views.dashboard') }}">Back to Dashboard</a></p>
-  </form>
 </div>
 {% endblock %}
 
