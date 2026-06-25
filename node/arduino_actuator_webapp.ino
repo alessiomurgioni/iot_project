@@ -47,7 +47,6 @@ void setWindow(bool open) {
 
   if (open) {
     Serial.println("Window OPENED");
-    // Rule: if the windows are open, the AC must be off.
     turnOffAirConditioning();
   } else {
     Serial.println("Window CLOSED");
@@ -94,7 +93,6 @@ void updateAirConditioning() {
     Serial.println("Hot air ON");
   }
 
-  // Explicitly off (owner chose Off) or no command received yet
   else {
     turnOffAirConditioning();
     if (requestedAcMode == '0') {
@@ -156,11 +154,9 @@ void setup() {
   Serial.println("AC starts OFF until PEOPLE_INSIDE:1 is received");
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
 void loop() {
 
-  // ── Handle incoming messages from NodeMCU ──────────────────────────────────
+  // ── Handle incoming messages from NodeMCU ─────────────────────────────
   if (linkSerial.available()) {
     String received = linkSerial.readStringUntil('\n');
     received.trim();
@@ -168,24 +164,20 @@ void loop() {
     Serial.print("Received: ");
     Serial.println(received);
 
-    // ── People inside: enable AC automation ──────────────────────────────────
+    // ── People inside: enable AC automation ──────────────────────────────
     if (received == "PEOPLE_INSIDE:1") {
       peopleInside = true;
 
       Serial.println("People detected inside: AC automation ENABLED");
       updateAirConditioning();
-
-      // No ACK: NodeMCU does not wait for one for this message.
     }
 
-    // ── Nobody inside: turn AC off ───────────────────────────────────────────
+    // ── Nobody inside: turn AC off ────────────────────────────────────
     else if (received == "PEOPLE_INSIDE:0") {
       peopleInside = false;
 
       Serial.println("Nobody inside: AC automation DISABLED");
       turnOffAirConditioning();
-
-      // No ACK: NodeMCU does not wait for one for this message.
     }
 
     // ── Temperature command: cold air ────────────────────────────────────────
@@ -202,7 +194,7 @@ void loop() {
       linkSerial.println("ACK1");
     }
 
-    // ── Temperature command: hot air ─────────────────────────────────────────
+    // ── Temperature command: hot air ──────────────────────────────────
     else if (received == "2") {
       requestedAcMode = '2';
 
@@ -216,7 +208,7 @@ void loop() {
       linkSerial.println("ACK2");
     }
 
-    // ── AC command: explicit off (owner chose "Off" on the dashboard) ────────
+    // ── AC command: explicit off (owner chose "Off" on the dashboard) ──────────
     else if (received == "0") {
       requestedAcMode = '0';
       turnOffAirConditioning();
@@ -237,7 +229,7 @@ void loop() {
       linkSerial.println("ACK_FIRE");
     }
 
-    // ── Fire no longer detected: re-arm the alarm for future events ──────────
+    // ── Fire no longer detected: re-arm the alarm for future events ───────
     else if (received == "FIRE_OFF") {
       stopFireAlarm();
       fireEventLatched = false;
@@ -246,19 +238,19 @@ void loop() {
       Serial.println("System re-armed for a future fire event");
     }
 
-    // ── Window: explicit OPEN ────────────────────────────────────────────────
+    // ── Window: explicit OPEN ───────────────────────────────────────────────
     else if (received == "WINDOW_OPEN") {
       // Never open windows during a fire.
       if (fireActive) {
         Serial.println("WINDOW_OPEN ignored: fire alarm is active");
         linkSerial.println("ACK_WINDOW_BLOCKED");
       } else {
-        setWindow(true);   // opening also forces the AC off (see setWindow)
+        setWindow(true);   // opening also forces the AC off
         linkSerial.println("ACK_WINDOW_OPEN");
       }
     }
 
-    // ── Window: explicit CLOSE ───────────────────────────────────────────────
+    // ── Window: explicit CLOSE ─────────────────────────────────
     else if (received == "WINDOW_CLOSED") {
       setWindow(false);
       // Closing the windows lets AC resume on the next mode command.
@@ -268,7 +260,7 @@ void loop() {
       linkSerial.println("ACK_WINDOW_CLOSED");
     }
 
-    // ── Window toggle (legacy / manual) ──────────────────────────────────────
+    // ── Window toggle (legacy / manual) ────────────────────────────
     else if (received == "WINDOW") {
       // Do not allow window opening while fire is active
       if (fireActive && !windowOpen) {
@@ -288,16 +280,13 @@ void loop() {
   }
 
 
-  // ── Fire alarm blinking and 30-second automatic timeout ────────────────────
+  // ── Fire alarm blinking and 30-second automatic timeout ────────────────
   if (fireActive) {
     unsigned long currentTime = millis();
 
     // End alarm after 30 seconds
     if (currentTime - fireAlarmStartTime >= FIRE_ALARM_DURATION_MS) {
       stopFireAlarm();
-
-      // fireEventLatched remains true:
-      // repeated FIRE messages cannot restart the alarm until FIRE_OFF arrives.
       Serial.println("Fire alarm automatically stopped after 30 seconds");
     }
 

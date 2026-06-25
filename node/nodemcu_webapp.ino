@@ -5,24 +5,19 @@
 #include <WiFiUdp.h>
 #include <WiFiClient.h>
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  WiFi & CoAP configuration  –  EDIT THESE THREE LINES
-// ══════════════════════════════════════════════════════════════════════════════
+
+
+// ── Communications Configuration ──────────────────────────────────────────────
 const char* WIFI_SSID     = "iPhone di Riccardo";   // iPhone hotspot SSID
-const char* WIFI_PASSWORD = "riccardo";     // iPhone hotspot password
-const char* SERVER_IP     = "172.20.10.2";             // IP printed by the Python server
-// ══════════════════════════════════════════════════════════════════════════════
+const char* WIFI_PASSWORD = "riccardo";             // iPhone hotspot password
+const char* SERVER_IP     = "172.20.10.2";          // IP printed by the Python server
+const uint16_t SERVER_PORT = 8000;                  // must match config.PORT
+const char* DEVICE_TOKEN  = "node-secret-123";      // Must match config.DEVICE_TOKEN_HASH on the server.
+//  ─────────────────────────────────────────────────────────────────────────────
 
-const uint16_t SERVER_PORT = 8000;                   // must match config.PORT
-
-// Must match config.DEVICE_TOKEN_HASH on the server (the server only stores a
-// hash of this; this is the same value flashed here and printed on the device).
-const char* DEVICE_TOKEN  = "node-secret-123";
-// ══════════════════════════════════════════════════════════════════════════════
-
-// Timing
-const unsigned long OUTDOOR_POLL_MS = 15000UL;  // refresh outdoor temp every 15 s
-const unsigned long REPORT_INTERVAL_MS = 2000UL; // matches the old loop cadence
+//  ── Timing ─────────────────────────────────────────────────────────────────────
+const unsigned long OUTDOOR_POLL_MS = 15000UL;
+const unsigned long REPORT_INTERVAL_MS = 2000UL;
 const unsigned long HTTP_TIMEOUT_MS  =  5000UL;
 const unsigned long WIFI_RETRY_MS    =  5000UL;
 
@@ -43,7 +38,7 @@ const uint8_t SENSOR_2_PIN = D2;   // inside  sensor
 
 const uint8_t DETECTED_LEVEL = LOW;
 
-// Timing settings
+// ── Timing Settings ─────────────────────────────────────────────────────────────────────
 const unsigned long DEBOUNCE_TIME_MS    =   35;
 const unsigned long PASSAGE_TIMEOUT_MS  = 1200;
 const unsigned long REARM_TIME_MS       =  250;
@@ -56,21 +51,15 @@ int  peopleInside  = 0;
 unsigned long totalEntries = 0;
 unsigned long totalExits   = 0;
 
-// ── External temperature (pulled from the webapp) ──────────────────────────────
+// ── External temperature ──────────────────────────────
 float externalTemperature = NAN;
 unsigned long lastOutdoorPoll = 0;
 
-// ── Owner's desired AC behaviour (pulled from the webapp) ─────────────────────
-// mode: "auto" | "cool" | "heat" | "off"
+// ── Owner's desired AC behaviour ─────────────────────
 String acMode      = "auto";
 float  acThreshold  = 25.0;
 
 // ── Window state held on the NodeMCU ──────────────────────────────────────────
-// Two variables, as required:
-//   windowCommand     -> what the server wants ("open" | "close" | "none")
-//   lastWindowCommand -> the last command we actually pushed to the Arduino
-// Plus windowsOpen, the ACTUAL state (confirmed by the Arduino ACK), which we
-// report back to the server so its _state["windows"] stays in sync.
 String windowCommand     = "none";
 String lastWindowCommand = "none";
 bool   windowsOpen       = false;   // false = closed, true = open
@@ -129,10 +118,7 @@ void connectWiFi() {
 }
 
 
-// ── Small JSON value extractor ─────────────────────────────────────────────────
-// Minimal helper: pulls the value for "key" out of a flat JSON object string
-// like {"mode":"auto","threshold":25.0,"window":"close"}. Good enough for our
-// own server's fixed-shape replies; not a general JSON parser.
+// ── JSON value extractor ─────────────────────────────────────────────────
 String jsonString(const String& body, const char* key) {
   String needle = String("\"") + key + "\":\"";
   int i = body.indexOf(needle);
@@ -153,8 +139,6 @@ float jsonNumber(const String& body, const char* key) {
 
 
 // ── HTTP helpers to the Flask webapp ────────────────────────────────────────────
-
-// GET /api/outdoor-temp?token=...  ->  {"outdoor_temp": 27.3}
 void fetchOutdoorTemperature() {
   if (WiFi.status() != WL_CONNECTED) return;
 
@@ -187,9 +171,6 @@ void fetchOutdoorTemperature() {
   }
 }
 
-// POST /api/report?token=...&indoor=...&people=...&fire=...&ac=...&windows=...
-// Replies with {"mode":"...","threshold":...,"window":"..."} so we refresh
-// acMode / acThreshold / windowCommand in the same round-trip.
 void reportToServer(float indoorTemp, bool fireNow, const char* acBlowing) {
   if (WiFi.status() != WL_CONNECTED) return;
 
@@ -201,7 +182,7 @@ void reportToServer(float indoorTemp, bool fireNow, const char* acBlowing) {
                "&people=" + String(peopleInside) +
                "&fire="   + (fireNow ? "1" : "0") +
                "&ac="     + acBlowing +
-               "&windows=" + (windowsOpen ? "open" : "closed");  // report ACTUAL state
+               "&windows=" + (windowsOpen ? "open" : "closed");
 
   http.setTimeout(HTTP_TIMEOUT_MS);
   if (http.begin(client, url)) {
@@ -295,7 +276,7 @@ void registerExit() {
 }
 
 
-// ── People counter – runs every loop iteration (non-blocking) ─────────────────
+// ── People counter  ─────────────────
 void updatePeopleCounter() {
   bool sensor1Detected = readDebouncedSensor(sensor1Filter, SENSOR_1_PIN);
   bool sensor2Detected = readDebouncedSensor(sensor2Filter, SENSOR_2_PIN);
@@ -348,7 +329,7 @@ void updatePeopleCounter() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Main Execution ─────────────────────────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
   linkSerial.begin(9600);
@@ -360,11 +341,8 @@ void setup() {
 
   initializeSensorFilter(sensor1Filter, SENSOR_1_PIN);
   initializeSensorFilter(sensor2Filter, SENSOR_2_PIN);
-
-  // Connect to iPhone hotspot
   connectWiFi();
 
-  // First outdoor-temperature fetch immediately after boot
   fetchOutdoorTemperature();
   lastOutdoorPoll = millis();
 
@@ -373,10 +351,10 @@ void setup() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
+
 void loop() {
 
-  // ── 0. Reconnect WiFi if dropped ──────────────────────────────────────────
+
   static unsigned long lastWifiCheck = 0;
   if (millis() - lastWifiCheck > WIFI_RETRY_MS) {
     lastWifiCheck = millis();
@@ -386,7 +364,6 @@ void loop() {
     }
   }
 
-  // ── 1. Outdoor temperature, every 15 seconds ──────────────────────────────
   if (millis() - lastOutdoorPoll >= OUTDOOR_POLL_MS) {
     lastOutdoorPoll = millis();
     fetchOutdoorTemperature();
@@ -398,26 +375,20 @@ void loop() {
     }
   }
 
-  // ── 2. People counter (non-blocking, runs every iteration) ────────────────
   updatePeopleCounter();
 
-  // ── 3. DHT11 local temperature read ───────────────────────────────────────
   float temp = dht.readTemperature();
 
   if (isnan(temp)) {
     Serial.println("Failed to read from DHT11");
-    // Do NOT return here: the fire sensor check below must still run.
-    // Fall through with temp = NAN; reportToServer handles NAN gracefully.
   }
 
-  // ── 4. Decide what the AC should do, based on the owner's chosen mode ─────
-  // signalToSend: '1' = cold air, '2' = hot air, '0' = explicit off, 0 = nothing
   char signalToSend = 0;
   const char* acBlowing = "off";
 
   if (!isnan(temp)) {
     if (peopleInside <= 0) {
-      acBlowing = "off";  // Arduino auto-offs when nobody is inside; nothing to send
+      acBlowing = "off";
     } else if (acMode == "cool") {
       acBlowing = "cool"; signalToSend = '1';
     } else if (acMode == "heat") {
@@ -440,7 +411,6 @@ void loop() {
     Serial.print(" | Sent to Arduino: ");
     Serial.println(signalToSend ? String(signalToSend) : String("(none)"));
 
-    // ── 5. Wait for ACK from Arduino ──────────────────────────────────────────
     unsigned long startTime = millis();
     String ack = "";
 
@@ -461,12 +431,11 @@ void loop() {
     }
   }
 
-  // ── 6. IR Flame sensor check ───────────────────────────────────────────────
   bool fireDetected = (digitalRead(IR_FLAME_PIN) == LOW);
-  static bool firePreviouslyDetected = false;  // Bug 1 & 4: track edge
+  static bool firePreviouslyDetected = false;
 
   if (fireDetected && !firePreviouslyDetected) {
-    // Rising edge: fire just appeared — send FIRE once (Bug 4)
+
     Serial.println("FIRE DETECTED! Sending alert to Arduino...");
     linkSerial.println("FIRE");
     firePreviouslyDetected = true;
@@ -490,13 +459,10 @@ void loop() {
       Serial.println("No fire ACK received");
     }
 
-    // The Arduino closes the windows by itself on FIRE; mirror that locally so
-    // our reported state and lastWindowCommand stay consistent.
     windowsOpen = false;
     lastWindowCommand = "close";
 
   } else if (!fireDetected && firePreviouslyDetected) {
-    // Falling edge: fire just cleared — send FIRE_OFF (Bug 1)
     Serial.println("Fire cleared. Sending FIRE_OFF to Arduino...");
     linkSerial.println("FIRE_OFF");
     firePreviouslyDetected = false;
@@ -521,7 +487,6 @@ void loop() {
     }
   }
 
-  // ── 7. Forward window command to Arduino if it changed ────────────────────
   if ((windowCommand == "open" || windowCommand == "close") &&
        windowCommand != lastWindowCommand) {
 
@@ -547,27 +512,21 @@ void loop() {
       Serial.print("[WINDOW] Arduino ACK: ");
       Serial.println(winAck);
 
-      // Update the ACTUAL state from what the Arduino confirms.
       if (winAck == "ACK_WINDOW_OPEN") {
         windowsOpen = true;
       } else if (winAck == "ACK_WINDOW_CLOSED") {
         windowsOpen = false;
       } else if (winAck == "ACK_WINDOW_BLOCKED") {
-        // Arduino refused (e.g. fire active): windows stay closed. Clear the
-        // last command so we retry once conditions allow.
         windowsOpen = false;
         lastWindowCommand = "none";
       }
     } else {
       Serial.println("[WINDOW] No ACK received");
-      lastWindowCommand = "none";  // allow retry next loop
+      lastWindowCommand = "none";
     }
   }
-
-  // ── 8. Report current state to the webapp (also refreshes mode/threshold/window) ──
   reportToServer(temp, fireDetected, acBlowing);
 
-  // ── 9. Short delay (non-blocking) ─────────────────────────────────────────
   unsigned long delayStart = millis();
   while (millis() - delayStart < 2000) {
     updatePeopleCounter();
