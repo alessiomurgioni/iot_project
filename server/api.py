@@ -99,7 +99,8 @@ def outdoor_temp():
 def report():
     """
     Receives the NodeMCU's information: indoor temp, people count, fire sensor, AC blowing state,
-    window state.
+    window state. Returns the resulting command (mode, threshold, window) so the device
+    can act on it without a separate request.
     """
     if not _device_authorized():
         return jsonify({"error": "bad token"}), 403
@@ -112,21 +113,6 @@ def report():
         ac=src.get("ac"),
         windows=src.get("windows"),
     )
-    return jsonify({
-        "mode": ctrl["mode"],
-        "threshold": ctrl["threshold"],
-        "window": ctrl["window"],
-    })
-
-
-@api_bp.route("/command")
-def command():
-    """
-    Returns the current desired command: mode, threshold, window; to the NodeMCU.
-    """
-    if not _device_authorized():
-        return jsonify({"error": "bad token"}), 403
-    ctrl = climate.get_command()
     return jsonify({
         "mode": ctrl["mode"],
         "threshold": ctrl["threshold"],
