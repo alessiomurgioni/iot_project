@@ -2,14 +2,20 @@ from pymongo import MongoClient, ASCENDING
 from werkzeug.security import generate_password_hash, check_password_hash
 import config
 
-# ── Database Connection Establishment ────────────────────────────────────────────────
+# ── Database Connection (user accounts only) ─────────────────────────────
+# NOTE: this connection is scoped to user accounts. The Digital Twin
+# architecture's own data (digital_replica, digital_twins) is owned by
+# DatabaseService (src/services/database_service.py), which has its own
+# independent MongoClient — the DT layer doesn't import or depend on this
+# module at all. Both connections point at the same physical MongoDB
+# instance/database by default (same config.MONGO_URI/MONGO_DB), but the
+# two are decoupled in code: either could point elsewhere, or be swapped
+# for a different backend, without touching the other.
 _client = MongoClient(config.MONGO_URI, serverSelectionTimeoutMS=5000)
 _db = _client[config.MONGO_DB]
 users = _db["users"]
-house_state = _db["house_state"]
 
 try:
-
     users.create_index([("username", ASCENDING)], unique=True)
 except Exception as exc:
     print(f"[DB] Warning: could not create index now ({exc}). "
@@ -80,21 +86,3 @@ def delete_user(username: str) -> int:
     - username: username
     """
     return users.delete_one({"username": username}).deleted_count
-
-# ── States DB Management Functions ────────────────────────────────────────────────
-def save_house_state(state: dict, control: dict):
-    """
-    Saves the house state to the database.
-
-    Inputs:
-    - state: copy of each state parameter
-    - control: copy of each control parameter
-    """
-    doc = {}
-    doc.update(state)
-    doc.update(control)
-    house_state.update_one(
-        {"_id": "latest"},
-        {"$set": doc},
-        upsert=True,
-    )

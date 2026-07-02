@@ -2,11 +2,12 @@ import socket
 from flask import Flask, render_template, session
 import climate
 import config
-from api import api_bp
+from src_dt.application.api import api_bp
 from security import auth_bp, limiter, login_required
 from owner import owner_bp
+from src_dt.digital_twin.dt_factory import DTFactory
 
-# ── Webapp Construction ──────────────────────────────────────────────────────────
+
 def get_ip():
     """
     Returns the IP address. Falls back to localhost
@@ -24,21 +25,26 @@ def get_ip():
 
 def create_app():
     """
-    Builds and configures the Flask application. It sets the session secret
-    key, hardens the session cookies, wires up the rate limiter, and registers
-    the auth, API, and owner blueprints; then returns the configured app instance.
-    SameSite=Lax stops the session cookie from being sent on cross-site POSTs.
-    It attaches the cookies only when the request is coming from the same site,
-    so a malicious page can't submit authenticated requests by stealing those cookies.
+    Builds and configures the Flask application.
     """
     app = Flask(__name__)
     app.secret_key = config.SECRET_KEY
     app.config.update(
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
-        #SESSION_COOKIE_SECURE=True,
+        # SESSION_COOKIE_SECURE=True,
     )
-    limiter.init_app(app)          # wire up rate limiting
+    limiter.init_app(app)  # wire up rate limiting
+
+    # Digital Twin factory, built once at startup and shared across requests.
+    # ensure_house_dt() registers (or loads) the "home" twin's identity
+    # record via DatabaseService's own MongoDB connection (digital_twins
+    # collection), referencing its Digital Replica and ClimateControlService
+    # — see src/digital_twin/dt_factory.py and src/services/database_service.py.
+    dt_factory = DTFactory()
+    app.config["DT_FACTORY"] = dt_factory
+    app.config["DT_ID"] = dt_factory.ensure_house_dt()
+
     app.register_blueprint(auth_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(owner_bp)
@@ -52,7 +58,6 @@ def create_app():
 
 
 app = create_app()
-
 
 
 # ── Main Execution ──────────────────────────────────────────────────────────

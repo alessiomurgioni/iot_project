@@ -64,12 +64,6 @@ void turnOffAirConditioning() {
 
 
 void updateAirConditioning() {
-  // Do not run AC if nobody is inside
-  if (!peopleInside) {
-    turnOffAirConditioning();
-    return;
-  }
-
   // Do not run AC while the windows are open
   if (windowOpen) {
     turnOffAirConditioning();
@@ -183,28 +177,14 @@ void loop() {
     // ── Temperature command: cold air ────────────────────────────────────────
     else if (received == "1") {
       requestedAcMode = '1';
-
-      if (peopleInside) {
-        updateAirConditioning();   // also respects the windows-open rule
-      } else {
-        turnOffAirConditioning();
-        Serial.println("Cold-air request saved, but nobody is inside");
-      }
-
+      updateAirConditioning();
       linkSerial.println("ACK1");
     }
 
     // ── Temperature command: hot air ──────────────────────────────────
     else if (received == "2") {
       requestedAcMode = '2';
-
-      if (peopleInside) {
-        updateAirConditioning();   // also respects the windows-open rule
-      } else {
-        turnOffAirConditioning();
-        Serial.println("Hot-air request saved, but nobody is inside");
-      }
-
+      updateAirConditioning();
       linkSerial.println("ACK2");
     }
 

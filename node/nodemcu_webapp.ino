@@ -387,9 +387,7 @@ void loop() {
   const char* acBlowing = "off";
 
   if (!isnan(temp)) {
-    if (peopleInside <= 0) {
-      acBlowing = "off";
-    } else if (acMode == "cool") {
+    if (acMode == "cool") {
       acBlowing = "cool"; signalToSend = '1';
     } else if (acMode == "heat") {
       acBlowing = "heat"; signalToSend = '2';

@@ -31,32 +31,11 @@ class LockoutTracker:
         self._until = {}
 
     def locked_for(self, key):
-        """
-        Returns the remaining seconds util the lock expires
-        for the given key parameter (ip address or username), or 0 if not locked.
-
-        Input:
-        - key: the ip address or username
-
-        Output:
-        - the remaining seconds until the lock expires
-        """
         with self._lock:
             remaining = self._until.get(key, 0) - time.time()
             return int(remaining) + 1 if remaining > 0 else 0
 
     def record_failure(self, key):
-        """
-        Keep tracks of the number of failures for the given IP or account.
-        Once the threshold is surpassed, set/extend the lock time with exponential backoff.
-        Returns the lock time in seconds or 0 if the threshold has not been reached yet.
-
-        Input:
-        - key: the ip address or username
-        Output:
-        - the lock time in seconds or 0 if the threshold has not been reached yet
-
-        """
         with self._lock:
             n = self._fails.get(key, 0) + 1
             self._fails[key] = n
@@ -68,12 +47,6 @@ class LockoutTracker:
             return 0
 
     def reset(self, key):
-        """
-        Clear all failure state for the given IP or account
-
-        Input:
-        - key: the ip address or username
-        """
         with self._lock:
             self._fails.pop(key, None)
             self._until.pop(key, None)
@@ -95,32 +68,46 @@ MAX_USERNAME_LEN = 32
 MAX_SECRET_LEN = 256
 
 
-# ── Input validation rules ───────────────────────────────────────────────────
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if not session.get("user"):
+        username = session.get("user")
+        if not username:
             if request.path.startswith("/api/"):
                 return jsonify({"error": "unauthorized"}), 401
             return redirect(url_for("auth.login"))
-        return f(*args, **kwargs)
 
+        if not db.get_user(username):
+            session.clear()
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "unauthorized"}), 401
+            return redirect(url_for("auth.login"))
+
+        return f(*args, **kwargs)
     return wrapper
 
 
 def owner_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        if not session.get("user"):
+        username = session.get("user")
+        if not username:
             if request.path.startswith("/api/"):
                 return jsonify({"error": "unauthorized"}), 401
             return redirect(url_for("auth.login"))
+
+        if not db.get_user(username):
+            session.clear()
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "unauthorized"}), 401
+            return redirect(url_for("auth.login"))
+
         if not session.get("owner"):
             if request.path.startswith("/api/"):
                 return jsonify({"error": "owner key required"}), 403
             return redirect(url_for("owner.unlock"))
-        return f(*args, **kwargs)
 
+        return f(*args, **kwargs)
     return wrapper
 
 
