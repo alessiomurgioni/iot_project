@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}My devices - Mainframe by Netwatch{% endblock %}
+{% block body %}
+<div class="wrap">
+    <header>
+        <div class="brand"><span class="dot"></span><b>Mainframe</b></div>
+        <div class="right">
+            <span class="who">{{ username }}</span>
+            <a class="navlink" href="{{ url_for('auth.logout') }}">Sign out</a>
+        </div>
+    </header>
+
+    <section class="hero" id="hero" style="padding:22px 26px">
+        <div class="eyebrow">Your devices</div>
+        <p class="hint" style="margin:8px 0 0">Select a device to open its dashboard, or add a new one below.</p>
+    </section>
+
+
+    <div class="device-grid">
+        {% for d in devices %}
+        <div class="device-card-wrap" data-dt-id="{{ d.dt_id }}">
+            <a
+                    class="device-card"
+                    data-dt-id="{{ d.dt_id }}"
+                    href="{{ url_for('web.dashboard', dt_id=d.dt_id) }}"
+            >
+                <div class="device-name">{{ d.name }}</div>
+                <div class="device-type">{{ d.product_label }}</div>
+
+                <div class="device-meta">
+                <span class="badge {{ 'owner' if d.role == 'owner' else 'member' }}">
+                    {{ d.role }}
+                </span>
+
+                    {% if not d.can_control %}
+                    <span class="badge view">view-only</span>
+                    {% endif %}
+
+                    <span class="device-fire-status"></span>
+                </div>
+            </a>
+            <button
+                    type="button"
+                    class="device-remove"
+                    data-dt-id="{{ d.dt_id }}"
+                    data-device-name="{{ d.name }}"
+                    aria-label="Remove {{ d.name }}"
+                    title="Remove device"
+            >
+                X
+            </button>
+        </div>
+
+        {% else %}
+        <div class="muted" style="padding:8px">
+            No devices yet. Add your first DHome below.
+        </div>
+        {% endfor %}
+    </div>
+
+    <button id="show-add-device" class="btn-primary" type="button" {% if error %}hidden{% endif %}>
+        Add device +
+    </button>
+
+    <section
+            id="add-device-section"
+            class="controls"
+            style="margin-top:24px"
+            {% if not error %}hidden{% endif %}
+    >
+        <h2>Add a device</h2>
+        <p class="hint">Enter the device id and token. Provide the owner key too
+            if you want to manage who can access this device.</p>
+
+        {% if error %}
+        <div class="err add-device-error" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('web.add_device') }}">
+            <label class="flabel" for="ptype">Device type</label>
+            <select class="finput" id="ptype" name="product">
+                {% for p in products %}
+                <option value="{{ p.key }}" {% if p.key== default_product %}selected{% endif %}>
+                    {{ p.label }}
+                </option>
+                {% endfor %}
+            </select>
+
+            <label class="flabel" for="did">Device id</label>
+            <input class="finput" id="did" name="device_id" autocomplete="off"
+                   placeholder="e.g. dhome-001">
+
+            <label class="flabel" for="dname">Name (optional)</label>
+            <input class="finput" id="dname" name="name" autocomplete="off"
+                   placeholder="e.g. Living room">
+
+            <label class="flabel" for="dtok">Device token</label>
+            <div class="field-wrap">
+                <input class="finput" id="dtok" name="device_token"
+                       type="password" autocomplete="off">
+            </div>
+
+            <label class="flabel" for="okey">Owner key (optional — unlocks management)</label>
+            <div class="field-wrap">
+                <input class="finput" id="okey" name="owner_key"
+                       type="password" autocomplete="off">
+            </div>
+
+            <button class="btn-primary" type="submit">Add device</button>
+            <button class="btn-cancel" id="cancel-add-device" type="button">Cancel</button>
+        </form>
+    </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/home.js') }}"></script>
+<script src="{{ url_for('static', filename='js/password_toggle.js') }}"></script>
+{% endblock %}

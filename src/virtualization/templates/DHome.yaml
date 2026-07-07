@@ -1,0 +1,48 @@
+schemas:
+  common_fields:
+    _id: str
+    type: str
+    profile:
+      house_name: str
+      latitude: float
+      longitude: float
+    metadata:
+      created_at: datetime
+      updated_at: datetime
+
+  entity:
+    data:
+      indoor_temp: float
+      outdoor_temp: float
+      people_inside: int
+      fire: bool
+      ac_blowing: str
+      windows: str
+      mode: str
+      threshold: float
+      last_report: datetime
+
+  validations:
+    mandatory_fields:
+      profile:
+        - house_name
+    type_constraints:
+      ac_blowing:
+        enum: ["cool", "heat", "off"]
+      windows:
+        enum: ["open", "closed"]
+      mode:
+        enum: ["auto", "cool", "heat", "off"]
+      threshold:
+        min: 10.0
+        max: 35.0
+    initialization:
+      data:
+        indoor_temp: null
+        outdoor_temp: null
+        people_inside: 0
+        fire: false
+        ac_blowing: "off"
+        windows: "closed"
+        mode: "auto"
+        threshold: 25.0
