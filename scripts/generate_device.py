@@ -1,21 +1,3 @@
-#!/usr/bin/env python3
-"""
-Provision a physical device so the platform will accept it. Factory step, run
-once per unit. Stores only hashes; the raw token and owner key go on the box.
-
-Usage (from the project root):
-    python -m scripts.provision_device DEVICE_ID DEVICE_TOKEN OWNER_KEY
-
-Example:
-    python -m scripts.provision_device dhome-001 tok-secret-001 owner-key-001 42.36028 -71.05778
-
-DEVICE_ID + DEVICE_TOKEN must match nodemcu_webapp.ino. A user then claims the
-device from the web home page with DEVICE_ID + DEVICE_TOKEN, optionally adding
-OWNER_KEY to gain management rights.
-"""
-# !/usr/bin/env python3
-
-
 import sys
 from werkzeug.security import generate_password_hash
 from config.config_loader import ConfigLoader

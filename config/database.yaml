@@ -2,8 +2,8 @@ database:
   connection:
     host: "localhost"
     port: 27017
-    username: ""   # Leave empty if no authentication is required
-    password: ""   # Leave empty if no authentication is required
+    username: ""
+    password: ""
   settings:
-    name: "domotic_db"   # database name
+    name: "domotic_db"
     auth_source: "admin"

@@ -13,14 +13,6 @@ from flask_limiter.util import get_remote_address
 
 from config import settings
 
-"""
-Access control for the multi-tenant platform. Sits in the application layer and
-uses current_app.config['DB_SERVICE'] for all account/device/membership lookups
-(the single Mongo gateway), so no persistence logic lives here — only auth
-policy: login/signup pages, per-twin membership/owner decorators, brute-force
-lockout, and device-scoped verification of the two shared secrets.
-"""
-
 auth_bp = Blueprint("auth", __name__)
 limiter = Limiter(key_func=get_remote_address)
 
@@ -206,9 +198,7 @@ def login():
 @auth_bp.route("/signup", methods=["GET", "POST"])
 @limiter.limit("5 per minute; 30 per hour", methods=["POST"])
 def signup():
-    """Create a platform account, decoupled from any device (devices are added
-    afterward from the home page). Email is required — it's how fire-alarm
-    notifications reach the account, not used to sign in."""
+    """Create an account"""
     error = None
     if request.method == "POST":
         username = request.form.get("username", "").strip()

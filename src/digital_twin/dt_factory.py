@@ -51,21 +51,9 @@ class DTFactory:
             raise ValueError(f"No DRFactory for schema type '{schema_type}'")
         return self.dr_factories[schema_type]
 
-    # ── Service-module mapping (reference mechanism) ─────────────────────────
-    # Generic on purpose: this base factory doesn't know about any concrete
-    # service. A product line supplies its own services -> module mapping by
-    # subclassing and overriding this (e.g. DHomeDTFactory).
     def _get_service_module_mapping(self) -> Dict[str, str]:
         return {}
 
-    # ── Registry CRUD (reference, encrypted at rest) ─────────────────────────
-    # `name` is the physical device id. It's stored pseudonymized (a
-    # deterministic HMAC) so the unique index still enforces "one twin per
-    # device" without keeping the real id in the clear. Each digital_replicas
-    # entry keeps its "type" in the clear (not identifying) but the device id
-    # only as a Fernet token ("id_enc") — decrypted back to "id" on read by
-    # _decrypt_dt_doc, so every other caller still sees the same plain shape
-    # ({"type", "id"}) it always did.
     def create_dt(self, name: str, product: str = None, schema_type: str = None) -> str:
         dt_data = {
             "_id": str(ObjectId()),

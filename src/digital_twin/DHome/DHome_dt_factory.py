@@ -3,19 +3,6 @@ from typing import Dict
 from src.digital_twin.dt_factory import DTFactory
 from config import catalog
 
-"""
-Domotic-platform extension of the generic reference DTFactory. Everything
-here is DHome-specific and has no business living in the reference-generic
-dt_factory.py: which concrete service classes back which service names,
-provisioning a twin for a freshly-claimed physical device (device-claiming is
-a domotic-platform concept, not a reference one), and device liveness (reads
-DHome's own "last_report" telemetry field).
-
-A future product line (e.g. DGarage) would get its own subclass the same way,
-each contributing its own services + provisioning flow without the two
-stepping on each other or bloating the generic factory.
-"""
-
 
 class DHomeDTFactory(DTFactory):
     def _get_service_module_mapping(self) -> Dict[str, str]:

@@ -2,9 +2,7 @@ import yaml
 from typing import Dict
 import os
 
-_DEFAULT_CONFIG_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "database.yaml"
-)
+_DEFAULT_CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.yaml")
 
 
 class ConfigLoader:

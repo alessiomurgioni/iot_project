@@ -9,16 +9,6 @@ from src.application.DHome import climate
 from src.services.DHome.fire_notification import send_fire_alert
 from config import settings
 
-"""
-The JSON API. Keeps the reference framework's generic Digital Twin / Digital
-Replica endpoints, and adds the domotic surface:
-
-- twin-scoped (member-gated): /api/twins/<dt_id>/state | control | monitoring
-- device-facing (device_id + token): /api/report | command | outdoor-temp
-
-register_api_blueprints wires every blueprint (including auth + web) onto the
-Flask app, matching the reference's registration entrypoint.
-"""
 
 # Domotic blueprints
 twin_api = Blueprint("twin_api", __name__, url_prefix="/api/twins")
@@ -173,23 +163,25 @@ def report():
     _factory().persist_dr(dt)
     d = dr["data"]
     if d.get("fire") and not was_on_fire:
-        _alert_fire(dt, dt_id, dr)
+        _alert_fire(dt, dt_id, device_id, dr)
     return jsonify({"mode": d["mode"], "threshold": d["threshold"], "window": d["windows"]})
 
 
-def _alert_fire(dt, dt_id, dr):
+def _alert_fire(dt, dt_id, device_id, dr):
     """Fire just went false -> true on this report (not re-sent on every
     subsequent report while it stays on). Emails every member with access to
     the twin, through the twin's own FireNotificationService when it has one;
     runs off-thread so a slow/unreachable SMTP server can't hold up the
-    device's report request."""
-    house_label = (dr.get("profile") or {}).get("house_name") or dt_id
+    device's report request. Uses device_id (the real physical device id,
+    e.g. 'cagliari-001') for the email, not dt_id (the twin's own internal
+    id) -- dt_id is only used to scope the membership/service lookups below."""
+    house_label = (dr.get("profile") or {}).get("house_name") or device_id
     emails = _db().list_member_emails(dt_id)
 
     def _run():
         try:
             dt.execute_service("FireNotificationService", action="notify_fire",
-                               emails=emails, house_label=house_label, device_id=dt_id)
+                               emails=emails, house_label=house_label, device_id=device_id)
         except ValueError:
             # Twin was provisioned before FireNotificationService was added to
             # the DHome catalog, so it's missing from its services list.
@@ -199,7 +191,7 @@ def _alert_fire(dt, dt_id, dr):
                 _factory().add_service(dt_id, "FireNotificationService")
             except Exception as exc:
                 print(f"[NOTIFY] Could not attach FireNotificationService to {dt_id}: {exc}")
-            send_fire_alert(emails, house_label, dt_id)
+            send_fire_alert(emails, house_label, device_id)
 
     threading.Thread(target=_run, daemon=True).start()
 

@@ -33,7 +33,7 @@ document.addEventListener("click", async (event) => {
 
     try {
         const r = await fetch(
-            `/twins/${encodeURIComponent(dtId)}/api/members/leave`,
+            `/api/twins/${encodeURIComponent(dtId)}/members/leave`,
             {
                 method: "POST",
                 headers: {"Content-Type": "application/json"}
@@ -78,6 +78,12 @@ async function refreshHomeFireStates() {
                     "fire",
                     state.fire
                 );
+
+                const status = card.querySelector(".device-status");
+                if (status) {
+                    status.classList.toggle("live", !!state.online);
+                    status.title = state.online ? "Online" : "Offline";
+                }
             } catch (error) {
                 console.error(`Could not refresh ${dtId}:`, error);
             }

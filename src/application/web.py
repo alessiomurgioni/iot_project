@@ -11,15 +11,6 @@ from src.application.auth import (
 )
 from config import catalog
 
-"""
-The user-facing web pages (Jinja) for the platform:
-- home:        the account's devices + the "add a product" form.
-- add_device:  claims a device (device_id + device_token required; owner_key
-               optional -> owner role).
-- dashboard:   the per-twin monitoring page (auth already done at login).
-- manage/api:  per-twin owner management — revoke control / remove a member.
-"""
-
 web_bp = Blueprint("web", __name__)
 
 
@@ -61,7 +52,6 @@ def _render_home(error=None, status=200):
         })
     return render_template("home.html", username=session["user"], devices=items,
                            products=catalog.list_products(),
-                           default_product=catalog.DEFAULT_PRODUCT,
                            error=error), status
 
 

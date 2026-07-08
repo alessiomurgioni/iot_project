@@ -622,6 +622,11 @@ body.fire {
     font-weight: 650
 }
 
+.device-name .device-status {
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
 .device-meta {
     display: flex;
     gap: 6px;

@@ -12,10 +12,6 @@ const char* SERVER_IP     = "172.20.10.2";          // IP printed by the server
 const uint16_t SERVER_PORT = 8000;                  // must match config/settings.py PORT
 
 // ── Device identity (multi-tenant platform) ───────────────────────────────────
-// DEVICE_ID is PUBLIC and lets the server look up this device's row in O(1);
-// DEVICE_TOKEN is the SECRET verified against that row's stored hash. Both must
-// match what was passed to scripts/provision_device.py. A user then claims this
-// device on the web home page with DEVICE_ID + DEVICE_TOKEN.
 const char* DEVICE_ID    = "dhome-001";
 const char* DEVICE_TOKEN = "tok-secret-001";
 

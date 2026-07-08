@@ -63,7 +63,7 @@ class SchemaRegistry:
 
     def get_collection_name(self, schema_type: str) -> str:
         """Get collection name for schema type"""
-        return f"{schema_type}_collection"
+        return f"{schema_type}_replicas"
 
     def get_validation_schema(self, schema_type: str) -> Dict:
         """Get validation schema for type"""

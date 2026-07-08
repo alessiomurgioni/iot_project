@@ -4,14 +4,6 @@ import requests
 from config import settings
 from src.services.encryption import decrypt_payload
 
-"""
-Per-house outdoor-temperature feed. A background thread iterates every twin,
-polls Open-Meteo for that house's coordinates (from its Digital Replica
-profile, falling back to the platform defaults), and caches the reading keyed
-by dt_id. Read by the /state and /outdoor-temp routes. Kept out of the DT
-control logic — it's a read-only external source.
-"""
-
 _lock = threading.Lock()
 _outdoor_by_dt = {}
 

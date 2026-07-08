@@ -24,7 +24,10 @@
                     data-dt-id="{{ d.dt_id }}"
                     href="{{ url_for('web.dashboard', dt_id=d.dt_id) }}"
             >
-                <div class="device-name">{{ d.name }}</div>
+                <div class="device-name">
+                    <span class="status device-status" title="Offline"><span class="pulse"></span></span>
+                    {{ d.name }}
+                </div>
                 <div class="device-type">{{ d.product_label }}</div>
 
                 <div class="device-meta">
