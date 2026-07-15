@@ -3,23 +3,17 @@ import os
 _BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Flask session signing key
-SECRET_KEY = os.environ.get(
-    "WEBAPP_SECRET",
-    "f654111eabeba73ecb7758faa65425dc1a9b95c6a4391e02ea36289fa429f300",
-)
+SECRET_KEY = os.environ.get("WEBAPP_SECRET","inserire secret qui")
 
 # Web server port
 PORT = int(os.environ.get("WEBAPP_PORT", "8000"))
 
 # Symmetric key used to encrypt sensitive data
-DB_ENCRYPTION_KEY = os.environ.get(
-    "DB_ENCRYPTION_KEY",
-    "rnAvD-ZLeNqPRmyfWPZnfE8S48sxRc9Q5frI2Hu_iTU=",
-)
+DB_ENCRYPTION_KEY = os.environ.get("DB_ENCRYPTION_KEY","inserire chiave qui")
 
 # Digital Replica schema for the house.
 SCHEMA_TYPE = "house"
-SCHEMA_PATH = os.environ.get("SCHEMA_PATH", os.path.join(_BASE, "src", "virtualization", "templates", "DHome.yaml"), )
+SCHEMA_PATH = os.environ.get("SCHEMA_PATH", os.path.join(_BASE, "src", "virtualization", "templates", "DHome.yaml"))
 
 # Outdoor-temperature feed
 OUTDOOR_REFRESH_S = int(os.environ.get("OUTDOOR_REFRESH_S", "150"))
