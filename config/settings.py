@@ -30,7 +30,7 @@ STALE_AFTER_S = int(os.environ.get("STALE_AFTER_S", "45"))
 # Outgoing email for fire-alarm alerts
 SMTP_HOST = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = os.environ.get("SMTP_PORT", 587)
-SMTP_USERNAME = os.environ.get("SMTP_USER", "NetwatchHomeController@gmail.com")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "rlal hxxq hzur qrat")
+SMTP_USERNAME = os.environ.get("SMTP_USER", "mail@gmail.com")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "inserire password qui")
 SMTP_USE_TLS = True
 ALERT_FROM_EMAIL = os.environ.get("SMTP_USER", "NetwatchHomeController@gmail.com")
