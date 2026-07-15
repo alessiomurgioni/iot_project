@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Manage {{ device_name }} {% endblock %}
+{% block body %}
+<div class="wrap">
+    <header>
+        <div class="brand"><span class="dot"></span><b>DHome</b></div>
+        <div class="right">
+            <span class="status" id="status"><span class="pulse"></span><span id="statusTxt">connecting…</span></span>
+            <span class="who">{{ device_name }}</span>
+            <a class="navlink" href="{{ url_for('web.dashboard', dt_id=dt_id) }}">Dashboard</a>
+            <a class="navlink" href="{{ url_for('web.home') }}">My Devices</a>
+        </div>
+    </header>
+
+    <section class="controls">
+        <h2>Accounts with access to this device</h2>
+        <p class="hint">Toggle whether an account can change AC / Windows, or remove it from this device.
+            Removing an account only revokes this device — its login and other devices are untouched.</p>
+        <table class="users" id="usersTable">
+            <thead>
+            <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Can control</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody id="usersBody">
+            <tr>
+                <td colspan="4" class="muted">Loading…</td>
+            </tr>
+            </tbody>
+        </table>
+        <div class="err" id="ownerErr" style="display:none"></div>
+    </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+    window.DT_ID = "{{ dt_id }}";
+    window.CURRENT_USER = "{{ username }}";
+</script>
+<script src="{{ url_for('static', filename='js/DHome/firewatch.js') }}"></script>
+<script src="{{ url_for('static', filename='js/DHome/owner.js') }}"></script>
+{% endblock %}

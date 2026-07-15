@@ -1,0 +1,9 @@
+database:
+  connection:
+    host: "localhost"
+    port: 27017
+    username: ""
+    password: ""
+  settings:
+    name: "domotic_db"
+    auth_source: "admin"
