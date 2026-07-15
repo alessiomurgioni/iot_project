@@ -2,7 +2,6 @@ from typing import Dict, List, Any
 
 
 class DigitalTwin:
-    """Core Digital Twin class that manages DRs and services"""
 
     def __init__(self):
         self.digital_replicas: List = []

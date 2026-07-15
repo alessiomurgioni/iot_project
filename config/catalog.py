@@ -9,31 +9,40 @@ PRODUCTS = {
         "label": "DHome — house climate & AC",
         "schema_type": "DHome",
         "schema_path": os.path.join(_TEMPLATES, "DHome.yaml"),
-        "services": ["ClimateControlService", "MonitoringService", "FireNotificationService"],
-        "dashboard_template": "DHome/dashboard.html",
+        "services": ["ClimateControlService", "FireNotificationService"],
     },
-    # To add a product later, e.g.:
     # "garage": {
     #     "key": "garage",
     #     "label": "DGarage — door & presence",
     #     "schema_type": "garage",
     #     "schema_path": os.path.join(_TEMPLATES, "DGarage.yaml"),
-    #     "services": ["DoorControlService", "MonitoringService"],
-    #     "dashboard_template": "garage_dashboard.html",
+    #     "services": ["GarageControlService"],
     # },
 }
 
 def list_products():
-    """All products, for the add-device dropdown (stable order)."""
+    """
+    Retrieve a list of available products.
+    """
     return list(PRODUCTS.values())
 
 
 def get_product(key: str):
-    """A product by key, or None if the key isn't in the fixed catalog."""
+    """
+    Retrieve a product configuration by its type
+
+    Input:
+    - key: the type of the product
+    """
     return PRODUCTS.get(key)
 
 
 def label_for(key: str) -> str:
-    """Display label for a product key (falls back to the raw key)."""
+    """
+    Retrieve a label for a product by its type.
+
+    Input:
+    - key: the type of the product
+    """
     p = PRODUCTS.get(key)
     return p["label"] if p else (key or "Unknown")

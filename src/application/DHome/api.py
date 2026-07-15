@@ -7,7 +7,6 @@ from src.application.auth import (
 )
 from src.application.DHome import climate
 from src.services.DHome.fire_notification import send_fire_alert
-from config import settings
 
 
 # Domotic blueprints
@@ -94,16 +93,6 @@ def control(dt_id):
     print(f"[API] {dt_id} control by {session['user']}: "
           f"mode={d['mode']} threshold={d['threshold']} window={d['windows']}")
     return jsonify({"mode": d["mode"], "threshold": d["threshold"], "window": d["windows"]})
-
-
-@twin_api.route("/<dt_id>/monitoring")
-@twin_member_required
-def monitoring(dt_id):
-    dt, err = _get_twin(dt_id)
-    if err:
-        return err
-    return jsonify(dt.execute_service("MonitoringService", action="summary",
-                                      stale_after_s=settings.STALE_AFTER_S))
 
 
 @twin_api.route("/<dt_id>/members/leave", methods=["POST"])
@@ -194,23 +183,6 @@ def _alert_fire(dt, dt_id, device_id, dr):
             send_fire_alert(emails, house_label, device_id)
 
     threading.Thread(target=_run, daemon=True).start()
-
-
-@device_api.route("/command")
-def command():
-    # NOTE: still GET + query args, unlike /report -- same Authorization
-    # header requirement, but device_id (not the token) is still visible in
-    # the URL/access log here. Say the word if you want this locked down the
-    # same way /report just was.
-    device_id = request.values.get("device_id", "")
-    dt_id, err = _authorize_device(device_id)
-    if err:
-        return err
-    dt, terr = _get_twin(dt_id)
-    if terr:
-        return terr
-    d = dt.digital_replicas[0]["data"]
-    return jsonify({"mode": d["mode"], "threshold": d["threshold"], "window": d["windows"]})
 
 
 @device_api.route("/outdoor-temp")

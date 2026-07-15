@@ -19,7 +19,6 @@ limiter = Limiter(key_func=get_remote_address)
 
 # ── Lockout ──────────────────────────────────────────────────────────────────
 class LockoutTracker:
-    """Per-IP exponential-backoff lockout for repeated failures (login, claim)."""
 
     def __init__(self, threshold=5, base_delay=30, max_delay=1800):
         self.threshold = threshold
@@ -63,7 +62,6 @@ MAX_EMAIL_LEN = 254
 MAX_SECRET_LEN = 256
 
 
-# ── Helpers over DB_SERVICE ──────────────────────────────────────────────────
 def _db():
     return current_app.config["DB_SERVICE"]
 
@@ -78,7 +76,6 @@ def can_control(username, dt_id):
     return bool(m and m.get("can_control"))
 
 
-# ── Secret verification (device-scoped) ──────────────────────────────────────
 _verified_device_tokens = set()   # (device_id, token)
 _verified_owner_keys = set()      # (device_id, key)
 
@@ -107,7 +104,6 @@ def verify_owner_key(device_id: str, key: str) -> bool:
     return False
 
 
-# ── Decorators ───────────────────────────────────────────────────────────────
 def _is_api() -> bool:
     return "/api/" in request.path
 
@@ -126,8 +122,6 @@ def login_required(f):
 
 
 def twin_member_required(f):
-    """login + membership of the twin in the URL. IDOR defense: dt_id is
-    user-controlled, so membership must be verified on every twin route."""
     @wraps(f)
     def wrapper(*args, **kwargs):
         username = session.get("user")
@@ -165,7 +159,6 @@ def twin_owner_required(f):
     return wrapper
 
 
-# ── Pages ────────────────────────────────────────────────────────────────────
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute; 30 per hour", methods=["POST"])
 def login():
@@ -198,7 +191,6 @@ def login():
 @auth_bp.route("/signup", methods=["GET", "POST"])
 @limiter.limit("5 per minute; 30 per hour", methods=["POST"])
 def signup():
-    """Create an account"""
     error = None
     if request.method == "POST":
         username = request.form.get("username", "").strip()

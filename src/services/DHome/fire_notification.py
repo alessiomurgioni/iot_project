@@ -8,14 +8,10 @@ from typing import Any, Dict
 from config import settings
 from src.services.base import BaseService
 
-# Relative to this file, not a hardcoded absolute path -- otherwise this only
-# ever works on the one machine/account it was written on.
 _ASCII_ART_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "ascii-art.txt")
 
 
 def _load_ascii_art() -> str:
-    """Best-effort: a missing/corrupt art file should never stop the alert
-    itself from sending."""
     try:
         with open(_ASCII_ART_PATH, encoding="utf-8") as f:
             return f.read()
@@ -24,11 +20,6 @@ def _load_ascii_art() -> str:
 
 
 def send_fire_alert(to_emails, house_label: str, device_id: str) -> None:
-    """Email every address in to_emails that dt_id's fire alarm just tripped.
-    One message per recipient (never a shared To:/Cc: line) so members can't
-    see each other's addresses. No-op if there's nothing to send to, or if
-    SMTP_HOST isn't configured (logged instead, so local dev without mail
-    credentials doesn't fail loudly)."""
     recipients = [e for e in (to_emails or []) if e]
     if not recipients:
         return
@@ -47,11 +38,6 @@ def send_fire_alert(to_emails, house_label: str, device_id: str) -> None:
         f"\n{art}\n"
     )
 
-    # Plain-text emails render in a proportional font in most webmail
-    # (Gmail's web UI included), which is why the ASCII art looked broken --
-    # it needs a monospace font to line up. The HTML alternative below wraps
-    # it in <pre> so any client that renders HTML shows it aligned; the plain
-    # part above is just the fallback for clients that don't.
     html_body = (
         f"<p>The fire alarm for '{escape(house_label)}' (device {escape(device_id)}) "
         f"has just been triggered.<br>"
@@ -82,10 +68,6 @@ def send_fire_alert(to_emails, house_label: str, device_id: str) -> None:
 
 
 class FireNotificationService(BaseService):
-    """action='notify_fire' -> emails every member of the twin. Doesn't touch
-    the Digital Replica (data/dr_type/attribute are accepted for interface
-    parity with the other services but unused)."""
-
     def execute(self, data: Dict, dr_type: str = None, attribute: str = None,
                 action: str = None, **kwargs) -> Any:
         if action != "notify_fire":

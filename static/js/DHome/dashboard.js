@@ -17,8 +17,14 @@ let winControllable = true;
 async function refresh() {
     try {
         const r = await fetch(api("/state"));
-        if (r.status === 401) { location.href = "/login"; return; }
-        if (r.status === 403) { location.href = "/"; return; }
+        if (r.status === 401) {
+            location.href = "/login";
+            return;
+        }
+        if (r.status === 403) {
+            location.href = "/";
+            return;
+        }
         const s = await r.json();
 
         document.getElementById("indoor").textContent = fmt(s.indoor_temp);
@@ -27,12 +33,15 @@ async function refresh() {
 
         const accent = accentFor(s.ac_blowing);
         document.documentElement.style.setProperty("--accent", accent);
-        document.getElementById("modeLine").textContent =
-            (verb[s.ac_blowing] || "Idle") + " · mode: " + s.control.mode;
 
         const fc = document.getElementById("fireChip");
-        if (s.fire) { fc.className = "chip fire"; fc.textContent = "FIRE DETECTED"; }
-        else { fc.className = "chip clear"; fc.textContent = "Clear"; }
+        if (s.fire) {
+            fc.className = "chip fire";
+            fc.textContent = "FIRE DETECTED";
+        } else {
+            fc.className = "chip clear";
+            fc.textContent = "Clear";
+        }
 
         const fire = !!s.fire;
         canControl = !!s.can_control;
@@ -43,8 +52,13 @@ async function refresh() {
 
         const st = document.getElementById("status");
         const txt = document.getElementById("statusTxt");
-        if (s.online) { st.classList.add("live"); txt.textContent = "Device online"; }
-        else { st.classList.remove("live"); txt.textContent = "Device offline"; }
+        if (s.online) {
+            st.classList.add("live");
+            txt.textContent = "Device online";
+        } else {
+            st.classList.remove("live");
+            txt.textContent = "Device offline";
+        }
 
         const acModes = document.getElementById("modes_ac");
         const thrBox = document.getElementById("thrBox");
@@ -52,10 +66,18 @@ async function refresh() {
         acModes.classList.toggle("disabled", !acControllable);
 
         if (acNote) {
-            if (fire) { acNote.textContent = "Fire detected — AC locked off until it clears."; acNote.style.display = "block"; }
-            else if (!canControl) { acNote.textContent = "Your account can view but not change AC settings."; acNote.style.display = "block"; }
-            else if (windowsOpen) { acNote.textContent = "The AC is off while the windows are open. Close the windows to control it."; acNote.style.display = "block"; }
-            else { acNote.style.display = "none"; }
+            if (fire) {
+                acNote.textContent = "Fire detected — AC locked off until it clears.";
+                acNote.style.display = "block";
+            } else if (!canControl) {
+                acNote.textContent = "Your account can view but not change AC settings.";
+                acNote.style.display = "block";
+            } else if (windowsOpen) {
+                acNote.textContent = "The AC is off while the windows are open. Close the windows to control it.";
+                acNote.style.display = "block";
+            } else {
+                acNote.style.display = "none";
+            }
         }
         acModes.querySelectorAll("button").forEach((b) =>
             b.classList.toggle("active", b.dataset.mode === s.control.mode));
@@ -70,13 +92,20 @@ async function refresh() {
         const winNote = document.getElementById("noControlNote_win");
         winModes.classList.toggle("disabled", !winControllable);
         if (winNote) {
-            if (fire) { winNote.textContent = "Fire detected — windows locked closed until it clears."; winNote.style.display = "block"; }
-            else if (!canControl) { winNote.textContent = "Your account can view but not change Windows settings."; winNote.style.display = "block"; }
-            else { winNote.style.display = "none"; }
+            if (fire) {
+                winNote.textContent = "Fire detected — windows locked closed until it clears.";
+                winNote.style.display = "block";
+            } else if (!canControl) {
+                winNote.textContent = "Your account can view but not change Windows settings.";
+                winNote.style.display = "block";
+            } else {
+                winNote.style.display = "none";
+            }
         }
         winModes.querySelectorAll("button").forEach((b) =>
             b.classList.toggle("active", b.dataset.window === s.control.window));
-    } catch (e) {}
+    } catch (e) {
+    }
 }
 
 async function sendControl(payload) {
@@ -89,9 +118,13 @@ async function sendControl(payload) {
 }
 
 document.querySelectorAll("#modes_ac button").forEach((b) =>
-    b.addEventListener("click", () => { if (acControllable) sendControl({mode: b.dataset.mode}); }));
+    b.addEventListener("click", () => {
+        if (acControllable) sendControl({mode: b.dataset.mode});
+    }));
 document.querySelectorAll("#modes_win button").forEach((b) =>
-    b.addEventListener("click", () => { if (winControllable) sendControl({window: b.dataset.window}); }));
+    b.addEventListener("click", () => {
+        if (winControllable) sendControl({window: b.dataset.window});
+    }));
 
 const thr = document.getElementById("thr");
 thr.addEventListener("input", () => {
@@ -105,20 +138,3 @@ thr.addEventListener("change", () => {
 
 refresh();
 setInterval(refresh, 3000);
-
-// Tints the page red when the current device reports a fire. No-op on pages
-// that aren't scoped to a specific twin (login, signup, home).
-async function firewatch_dash() {
-    if (!window.DT_ID) return;
-    try {
-        const r = await fetch(`/api/twins/${window.DT_ID}/state`);
-        if (!r.ok) return;
-        const s = await r.json();
-        document.body.classList.toggle("fire", !!s.fire);
-    } catch (e) {}
-}
-if (window.DT_ID) {
-    firewatch_dash();
-    setInterval(firewatch_dash, 3000);
-}
-

@@ -12,23 +12,9 @@ from src.application.DHome import climate
 from config.config_loader import ConfigLoader
 from config import settings
 
-"""
-Application entrypoint, following the reference framework's FlaskServer shape:
-build the SchemaRegistry, DatabaseService (from config/database.yaml via
-ConfigLoader), DRFactory, and DTFactory; store them on app.config; register all
-blueprints; then run.
-
-Domotic additions: the session secret + rate limiter for the auth layer, and
-the per-house outdoor-temperature poller started when the server actually runs.
-There is no single-house bootstrap — twins are created on demand when users
-claim devices.
-"""
-
-
 
 class FlaskServer:
     def __init__(self):
-        # Flask finds ./templates and ./static next to this file.
         self.app = Flask(__name__)
         self.app.secret_key = settings.SECRET_KEY
         self.app.config.update(
@@ -85,8 +71,7 @@ class FlaskServer:
         except Exception:
             ip = "127.0.0.1"
         print("\n=== Domotic Digital-Twin platform ===")
-        print(f"Home / Login : http://{ip}:{port}")
-        print(f"Sign up      : http://{ip}:{port}/signup")
+        print(f"Home         : http://{ip}:{port}")
 
 
 if __name__ == "__main__":

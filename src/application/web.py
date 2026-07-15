@@ -23,10 +23,6 @@ def _factory():
 
 
 def _device_label(m, reg, dt_id):
-    """This user's own pseudonym for a device (what they typed in "Name" when
-    adding it), never a name shared globally with every other member of the
-    same twin. Falls back to the real device id, then the twin id, if they
-    never set one."""
     label = (m.get("label") or "").strip() if m else ""
     if label:
         return label
@@ -37,7 +33,6 @@ def _device_label(m, reg, dt_id):
     return dt_id
 
 
-# ── Home + claim ─────────────────────────────────────────────────────────────
 def _render_home(error=None, status=200):
     items = []
     for m in _db().list_memberships_for_user(session["user"]):
@@ -66,9 +61,6 @@ def home():
 @login_required
 @limiter.limit("10 per minute; 40 per hour")
 def add_device():
-    """Claim a device. device_id + device_token prove possession; the optional
-    owner_key, if correct, grants the owner role (management tab). First claim
-    provisions the twin; later claims join it."""
     ip = get_remote_address()
     wait = claim_lockout.locked_for(ip)
     if wait:
@@ -79,7 +71,7 @@ def add_device():
     token = (request.form.get("device_token") or "").strip()
     owner_key = (request.form.get("owner_key") or "").strip()
     name = (request.form.get("name") or "").strip() or None
-    product = (request.form.get("product") or catalog.DEFAULT_PRODUCT).strip()
+    product = request.form.get("product")
 
     if not device_id or not token:
         return _redirect_home_error(
@@ -109,8 +101,6 @@ def add_device():
     device = _db().get_device(device_id)
     dt_id = device.get("claimed_by_dt")
     if not dt_id:
-        # First claim provisions the twin for the chosen product type. Later
-        # claimers join whatever type the device already is.
         dt_id = _factory().create_twin_for_device(device_id, product=product, house_name=name)
         _db().set_device_twin(device_id, dt_id)
 
@@ -119,29 +109,28 @@ def add_device():
     return redirect(url_for("web.home"))
 
 
-# ── Per-twin dashboard ───────────────────────────────────────────────────────
 @web_bp.route("/twins/<dt_id>")
 @twin_member_required
 def dashboard(dt_id):
     reg = _factory().get_dt(dt_id)
     m = _db().get_membership(session["user"], dt_id)
     name = _device_label(m, reg, dt_id)
-    spec = catalog.get_product(reg.get("product")) if reg else None
-    template = spec["dashboard_template"] if spec else "DHome/dashboard.html"
+    spec = catalog.get_product(reg.get("product"))
+    template = f"{spec['schema_type']}/dashboard.html"
     return render_template(template, username=session["user"], dt_id=dt_id,
-                           device_name=name, product_label=catalog.label_for(reg.get("product") if reg else None),
+                           device_name=name, product_label=catalog.label_for(reg.get("product")),
                            is_owner=is_owner(session["user"], dt_id))
 
 
-# ── Per-twin management (owner only) ─────────────────────────────────────────
 @web_bp.route("/twins/<dt_id>/manage")
 @twin_owner_required
 def manage(dt_id):
     reg = _factory().get_dt(dt_id)
     m = _db().get_membership(session["user"], dt_id)
     name = _device_label(m, reg, dt_id)
-    return render_template("DHome/owner_manage_DHome.html", username=session["user"],
-                           dt_id=dt_id, device_name=name)
+    spec = catalog.get_product(reg.get("product"))
+    template = f"{spec['schema_type']}/owner_manage.html"
+    return render_template(template, username=session["user"], dt_id=dt_id, device_name=name)
 
 
 @web_bp.route("/twins/<dt_id>/api/members")

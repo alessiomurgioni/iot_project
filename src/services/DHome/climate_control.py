@@ -4,12 +4,6 @@ from src.services.base import BaseService
 
 
 class ClimateControlService(BaseService):
-    """
-    Owner-control + device-telemetry handler for a house's Digital Replica.
-    A BaseService in the framework's services pool; DigitalTwin.execute_service
-    calls execute(data, **kwargs) with an 'action' selecting the handler.
-    Twin-agnostic — operates on whatever DR the twin hands it.
-    """
 
     def execute(self, data: Dict, dr_type: str = None, attribute: str = None,
                 action: str = None, **kwargs) -> Any:
@@ -27,11 +21,6 @@ class ClimateControlService(BaseService):
         return dr
 
     def _set_control(self, d, mode, threshold, window):
-        """Apply a dashboard command with safety rules:
-        1. Fire override — while d['fire'], force AC off / windows closed.
-        2. Window vs AC — opening a window forces mode 'off'; mode/threshold
-           changes only apply while windows are closed.
-        3. Threshold clamped to 10.0-35.0."""
         if d.get("fire"):
             d["mode"], d["windows"] = "off", "closed"
             return
@@ -46,10 +35,6 @@ class ClimateControlService(BaseService):
                 d["threshold"] = max(10.0, min(35.0, float(threshold)))
 
     def _update_from_device(self, d, indoor, people, fire, ac, windows):
-        """Apply a NodeMCU telemetry report leniently: a malformed field is
-        logged and skipped, never crashing the report or clobbering others.
-        Occupancy 1->0 auto-shuts AC + closes windows; a true fire reading
-        forces the safety override and holds while d['fire'] is True."""
         prev_people = d.get("people_inside", 0)
 
         if indoor not in (None, ""):

@@ -7,7 +7,6 @@ class SchemaRegistry:
         self.schemas = {}
 
     def load_schema(self, schema_type: str, yaml_path: str) -> None:
-        """Load schema from YAML file"""
         try:
             with open(yaml_path, "r") as file:
                 raw_schema = yaml.safe_load(file)
@@ -19,8 +18,6 @@ class SchemaRegistry:
             raise ValueError(f"Failed to load schema from {yaml_path}: {str(e)}")
 
     def _convert_yaml_to_mongodb_schema(self, yaml_schema: Dict) -> Dict:
-        """Convert YAML schema format to MongoDB $jsonSchema format"""
-
         def convert_type(yaml_type: str) -> str:
             type_mapping = {
                 "str": "string", "int": "int", "float": "double", "bool": "bool",
@@ -62,11 +59,9 @@ class SchemaRegistry:
         }
 
     def get_collection_name(self, schema_type: str) -> str:
-        """Get collection name for schema type"""
         return f"{schema_type}_replicas"
 
     def get_validation_schema(self, schema_type: str) -> Dict:
-        """Get validation schema for type"""
         if schema_type not in self.schemas:
             raise ValueError(f"Schema not found for type: {schema_type}")
         return self.schemas[schema_type]

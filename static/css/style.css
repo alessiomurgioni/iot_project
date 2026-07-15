@@ -545,8 +545,6 @@ body.fire {
     --cool: #c60a0a;
 }
 
-/* ── Home page: device cards + add form ─────────────────────────────────── */
-
 .device-card {
     transition: background-color .4s ease,
     border-color .4s ease,
@@ -722,7 +720,7 @@ body.fire {
     color: var(--muted)
 }
 
-/* ── Product type on device cards + select styling ──────────────────────── */
+
 .device-type {
     margin-top: 4px;
     font-size: .8rem;

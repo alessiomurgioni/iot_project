@@ -6,18 +6,6 @@ from src.services.encryption import encrypt_payload, decrypt_payload, pseudonymi
 
 
 class DatabaseService:
-    """
-    The single MongoDB gateway. Keeps the reference framework's Digital Replica
-    access (schema-routed collections) and adds the multi-tenant platform
-    collections — users, devices, memberships — so the whole app still talks to
-    Mongo through one place.
-
-    Digital Replicas live one collection per schema type
-    (schema_registry.get_collection_name), the Digital Twin registry lives in
-    "digital_twins", and the platform data lives in "users", "devices" and
-    "memberships".
-    """
-
     def __init__(self, connection_string: str, db_name: str,
                  schema_registry: SchemaRegistry):
         self.connection_string = connection_string
@@ -26,7 +14,6 @@ class DatabaseService:
         self.client = None
         self.db = None
 
-    # ── Connection ───────────────────────────────────────────────────────────
     def connect(self) -> None:
         try:
             self.client = MongoClient(self.connection_string)
@@ -45,27 +32,15 @@ class DatabaseService:
         return self.client is not None and self.db is not None
 
     def _ensure_platform_indexes(self) -> None:
-        """Indexes for the platform collections (idempotent)."""
         try:
             self.db["users"].create_index([("username", ASCENDING)], unique=True)
-            # sparse: accounts created before the email field existed have none,
-            # and shouldn't collide with each other on that missing value.
-            self.db["users"].create_index([("email", ASCENDING)], unique=True, sparse=True)
+            self.db["users"].create_index([("email_index", ASCENDING)], unique=True, sparse=True)
             self.db["memberships"].create_index(
                 [("username", ASCENDING), ("dt_id", ASCENDING)], unique=True)
             self.db["memberships"].create_index([("dt_id", ASCENDING)])
         except Exception as exc:
             print(f"[DB] Warning creating platform indexes: {exc}")
 
-    # ── Digital Replica persistence (reference, encrypted at rest) ───────────
-    # Every Digital Replica document is stored as {"_id", "type", "metadata",
-    # "enc"}: "_id" is pseudonymize(real device id) — a deterministic, non-
-    # reversible HMAC, so Mongo can still index/look up by device id without
-    # storing it in the clear. "enc" is a single Fernet token wrapping the real
-    # device id + "data" (temperatures, status, mode/threshold/windows...) +
-    # "profile" (house name, location). Everything above this layer (services,
-    # DTFactory, routes) still sees plain "_id"/"data"/"profile" dicts — the
-    # encrypt/decrypt happens only at the Mongo boundary.
     def _decrypt_dr_doc(self, doc: Optional[Dict]) -> Optional[Dict]:
         if not doc:
             return doc
@@ -104,9 +79,6 @@ class DatabaseService:
         return self._decrypt_dr_doc(doc)
 
     def query_drs(self, dr_type: str, query: Dict = None) -> List[Dict]:
-        """NOTE: data/profile are encrypted, so `query` can only filter on
-        plaintext top-level fields (_id, type, metadata) — not on readings or
-        status inside "data"/"profile"."""
         if not self.is_connected():
             raise ConnectionError("Not connected to MongoDB")
         collection_name = self.schema_registry.get_collection_name(dr_type)
@@ -142,24 +114,44 @@ class DatabaseService:
         if result.deleted_count == 0:
             raise ValueError(f"Digital Replica not found: {dr_id}")
 
-    # ── Users (platform accounts) ────────────────────────────────────────────
+    def _decrypt_user_doc(self, doc: Optional[Dict]) -> Optional[Dict]:
+        if not doc:
+            return doc
+        enc = doc.pop("email_enc", None)
+        doc.pop("email_index", None)
+        if enc:
+            try:
+                doc["email"] = decrypt_payload(enc)
+            except Exception:
+                doc["email"] = None
+        elif doc.get("email"):
+            legacy_email = doc["email"]
+            self.db["users"].update_one(
+                {"username": doc["username"]},
+                {"$set": {"email_index": pseudonymize(legacy_email),
+                          "email_enc": encrypt_payload(legacy_email)},
+                 "$unset": {"email": ""}},
+            )
+        return doc
+
     def create_user(self, username: str, password_hash: str, email: str = None) -> None:
-        """Store a new account. The caller (auth layer) supplies the hash."""
         doc = {"username": username, "password": password_hash}
         if email:
-            doc["email"] = email
+            doc["email_index"] = pseudonymize(email)
+            doc["email_enc"] = encrypt_payload(email)
         self.db["users"].insert_one(doc)
 
     def get_user(self, username: str) -> Optional[Dict]:
-        return self.db["users"].find_one({"username": username})
+        doc = self.db["users"].find_one({"username": username})
+        return self._decrypt_user_doc(doc)
 
     def get_user_by_email(self, email: str) -> Optional[Dict]:
-        return self.db["users"].find_one({"email": email})
+        doc = self.db["users"].find_one(
+            {"$or": [{"email_index": pseudonymize(email)}, {"email": email}]}
+        )
+        return self._decrypt_user_doc(doc)
 
     def list_member_emails(self, dt_id: str) -> List[str]:
-        """Emails for every account with access to this twin, for alerting.
-        Accounts predating the required-email field are skipped rather than
-        crashing the alert."""
         emails = []
         for m in self.db["memberships"].find({"dt_id": dt_id}, {"username": 1, "_id": 0}):
             user = self.get_user(m["username"])
@@ -168,14 +160,13 @@ class DatabaseService:
         return emails
 
     def list_users(self) -> List[Dict]:
-        return list(self.db["users"].find({}, {"password": 0, "_id": 0}))
+        docs = list(self.db["users"].find({}, {"password": 0, "_id": 0}))
+        return [self._decrypt_user_doc(d) for d in docs]
 
     def delete_user(self, username: str) -> int:
         return self.db["users"].delete_one({"username": username}).deleted_count
 
-    # ── Devices (provisioned physical units) ─────────────────────────────────
     def save_device(self, device_id: str, token_hash: str, owner_key_hash: str, latitude: str, longitude: str) -> None:
-        """Register a device the platform will accept (hashes only). Idempotent."""
         self.db["devices"].update_one(
             {"_id": device_id},
             {"$setOnInsert": {
@@ -197,13 +188,8 @@ class DatabaseService:
     def set_device_twin(self, device_id: str, dt_id: str) -> None:
         self.db["devices"].update_one({"_id": device_id}, {"$set": {"claimed_by_dt": dt_id}})
 
-    # ── Memberships (user <-> twin join) ─────────────────────────────────────
     def add_membership(self, username: str, dt_id: str, role: str = "member",
                        can_control: bool = True, label: str = None) -> None:
-        """`label` is this user's own pseudonym for the device (e.g. "Living
-        room") — private to their membership row, never shared with other
-        members of the same twin. Left unset if not provided; callers fall
-        back to the device id for display in that case."""
         set_fields = {"role": role, "can_control": bool(can_control)}
         if label:
             set_fields["label"] = label

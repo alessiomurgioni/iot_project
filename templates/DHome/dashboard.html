@@ -15,7 +15,6 @@
     <section class="hero" id="hero">
         <div class="eyebrow">Indoor temperature</div>
         <div class="reading"><span class="val" id="indoor">--</span><span class="unit">°C</span></div>
-        <div class="mode-line" id="modeLine">—</div>
     </section>
 
     <div class="grid">
@@ -61,5 +60,6 @@
 {% endblock %}
 {% block scripts %}
 <script>window.DT_ID = "{{ dt_id }}";</script>
+<script src="{{ url_for('static', filename='js/DHome/firewatch.js') }}"></script>
 <script src="{{ url_for('static', filename='js/DHome/dashboard.js') }}"></script>
 {% endblock %}

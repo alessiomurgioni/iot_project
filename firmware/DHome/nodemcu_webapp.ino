@@ -114,11 +114,14 @@ float jsonNumber(const String& body, const char* key) {
 void fetchOutdoorTemperature() {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClient client; HTTPClient http;
-  // device_id + token identify this device to the server.
+  // device_id identifies this device; the token proves possession and is
+  // sent only in the Authorization header, never in the URL (so it can't
+  // leak through server/proxy access logs).
   String url = String("http://") + SERVER_IP + ":" + SERVER_PORT +
-               "/api/outdoor-temp?device_id=" + DEVICE_ID + "&token=" + DEVICE_TOKEN;
+               "/api/outdoor-temp?device_id=" + DEVICE_ID;
   http.setTimeout(HTTP_TIMEOUT_MS);
   if (http.begin(client, url)) {
+    http.addHeader("Authorization", String("Bearer ") + DEVICE_TOKEN);
     int code = http.GET();
     if (code == 200) {
       String body = http.getString();

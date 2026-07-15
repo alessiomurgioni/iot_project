@@ -8,7 +8,6 @@ class DHomeDTFactory(DTFactory):
     def _get_service_module_mapping(self) -> Dict[str, str]:
         return {
             "ClimateControlService": "src.services.DHome.climate_control",
-            "MonitoringService": "src.services.DHome.monitoring",
             "FireNotificationService": "src.services.DHome.fire_notification",
         }
 

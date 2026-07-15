@@ -96,21 +96,13 @@ let homeRefreshTimer = null;
 function startHomeRefreshLoop() {
     if (homeRefreshTimer) return;
     homeRefreshTimer = setInterval(() => {
-        // Only touches .device-card elements above -- never the add-device
-        // form, so this can't collapse it or clear what someone's typing.
         if (document.visibilityState === "visible") {
             refreshHomeFireStates();
         }
     }, 3000);
 }
 
-function stopHomeRefreshLoop() {
-    clearInterval(homeRefreshTimer);
-    homeRefreshTimer = null;
-}
 
-// Skip polling while the tab is in the background, and catch up immediately
-// when it becomes visible again instead of waiting for the next tick.
 document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
         refreshHomeFireStates();

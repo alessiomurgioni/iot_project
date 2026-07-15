@@ -11,31 +11,10 @@ from config import catalog
 
 
 class DTFactory:
-    """
-    Factory for creating and managing Digital Twins, following the reference
-    framework: the DT registry lives in the "digital_twins" collection, and
-    services are attached by name via a service-module mapping and loaded with
-    dynamic import.
-
-    Product-aware: it loads every product's Digital Replica schema (from the
-    fixed catalog) into the SchemaRegistry and keeps one DRFactory per schema
-    type.
-
-    This class stays product-agnostic on purpose — it knows nothing about any
-    specific service implementation. _get_service_module_mapping() returns
-    empty here; a product line (e.g. DHome) supplies its own services by
-    subclassing this factory rather than editing it. See
-    src/digital_twin/DHome/DHome_dt_factory.py for the domotic platform's
-    subclass, which adds create_twin_for_device(), is_online(), and the
-    DHome service-module mapping.
-    """
-
     def __init__(self, db_service: DatabaseService, schema_registry: SchemaRegistry,
                  dr_factory: DRFactory = None):
         self.db_service = db_service
         self.schema_registry = schema_registry
-
-        # Load every product's schema and build a DRFactory per schema type.
         self.dr_factories: Dict[str, DRFactory] = {}
         for product in catalog.list_products():
             stype, spath = product["schema_type"], product["schema_path"]
@@ -58,8 +37,8 @@ class DTFactory:
         dt_data = {
             "_id": str(ObjectId()),
             "name": pseudonymize(name),
-            "product": product,  # device type key (e.g. "dhome")
-            "schema_type": schema_type,  # its Digital Replica schema type
+            "product": product,
+            "schema_type": schema_type,
             "digital_replicas": [],
             "services": [],
             "metadata": {
@@ -97,7 +76,7 @@ class DTFactory:
         module_name = mapping[service_name]
         try:
             service_module = __import__(module_name, fromlist=[service_name])
-            getattr(service_module, service_name)()  # verify it loads/instantiates
+            getattr(service_module, service_name)()
         except (ImportError, AttributeError) as e:
             raise ValueError(f"Failed to load service {service_name} from {module_name}: {e}")
         self.db_service.db["digital_twins"].update_one(
@@ -127,7 +106,6 @@ class DTFactory:
             dt.create_index("metadata.created_at")
             dt.create_index("metadata.updated_at")
 
-    # ── Instance hydration (reference) ───────────────────────────────────────
     def create_dt_from_data(self, dt_data: dict) -> DigitalTwin:
         dt = DigitalTwin()
         for dr_ref in dt_data.get("digital_replicas", []):
@@ -152,15 +130,8 @@ class DTFactory:
         return self.create_dt_from_data(dt_data)
 
     def _dr_type_of(self, dt: DigitalTwin) -> str:
-        """The schema type of a twin's replica, read from the replica itself
-        (no single-type assumption)."""
         return dt.digital_replicas[0]["type"]
 
     def persist_dr(self, dt: DigitalTwin) -> None:
-        """Write a service-mutated replica back to Mongo, under its own type."""
         dr = dt.digital_replicas[0]
         self.db_service.update_dr(dr["type"], dr["_id"], dr)
-
-    # create_twin_for_device() (device-claiming provisioning) and is_online()
-    # (device liveness) are domotic-platform concerns, not reference-generic
-    # ones — see DHomeDTFactory in src/digital_twin/DHome/DHome_dt_factory.py.
