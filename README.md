@@ -9,7 +9,7 @@ pip install -r requirements.txt
 ```
 Then start a mongo db database locally.
 
-## Generate a device (once per unit)
+## Generate a device
 
 ```bash
  python -m scripts.generate_device boston-001 tok-secret-001 owner-key-001 42.36028 -71.05778
