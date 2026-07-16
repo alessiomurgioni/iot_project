@@ -3,7 +3,6 @@ import smtplib
 import ssl
 from email.message import EmailMessage
 from html import escape
-from typing import Any, Dict
 
 from config import settings
 from src.services.base import BaseService
@@ -12,6 +11,12 @@ _ASCII_ART_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "asse
 
 
 def _load_ascii_art() -> str:
+    """
+    Read the ASCII-art banner used in fire-alert emails.
+
+    Outputs:
+    - file contents, or empty string if the file is missing
+    """
     try:
         with open(_ASCII_ART_PATH, encoding="utf-8") as f:
             return f.read()
@@ -20,6 +25,14 @@ def _load_ascii_art() -> str:
 
 
 def send_fire_alert(to_emails, house_label: str, device_id: str) -> None:
+    """
+    Email a fire-alarm notice to the given accounts.
+
+    Inputs:
+    - to_emails: list of email addresses to send the notification.
+    - house_label: display name of the house/device for the message
+    - device_id: physical device id, used in logs and the message
+    """
     recipients = [e for e in (to_emails or []) if e]
     if not recipients:
         return
@@ -68,8 +81,20 @@ def send_fire_alert(to_emails, house_label: str, device_id: str) -> None:
 
 
 class FireNotificationService(BaseService):
-    def execute(self, data: Dict, dr_type: str = None, attribute: str = None,
-                action: str = None, **kwargs) -> Any:
+    """Twin-attachable service that sends a fire-alarm email on request."""
+
+    def execute(self, data: dict, dr_type: str = None, attribute: str = None,
+                action: str = None, **kwargs):
+        """
+        Send a fire alert for the "notify_fire" action.
+
+        Inputs:
+        - action: must be "notify_fire"
+        - kwargs: emails, house_label, device_id
+
+        Outputs:
+        - dict with the count of notified email accounts
+        """
         if action != "notify_fire":
             raise ValueError(f"Unknown action for FireNotificationService: {action}")
         emails = kwargs.get("emails") or []

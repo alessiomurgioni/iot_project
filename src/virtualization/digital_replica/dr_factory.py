@@ -1,6 +1,5 @@
 from datetime import datetime
-from typing import Dict, Any, Type, Optional, List, Union
-from pydantic import BaseModel, create_model, Field, field_validator
+from pydantic import create_model, Field, field_validator
 import yaml
 import uuid
 
@@ -11,14 +10,23 @@ class DRFactory:
         if not self.schema or "schemas" not in self.schema:
             raise ValueError(f"Invalid schema structure in {schema_path}")
 
-    def _load_schema(self, path: str) -> Dict:
+    def _load_schema(self, path: str) -> dict:
+        """
+        Read the YAML schema file.
+
+        Inputs:
+        - path: path to the YAML schema file
+
+        Outputs:
+        - parsed schema dict
+        """
         try:
             with open(path, "r") as file:
                 return yaml.safe_load(file)
         except Exception as e:
             raise ValueError(f"Failed to load schema: {str(e)}")
 
-    def _create_profile_model(self) -> Type[BaseModel]:
+    def _create_profile_model(self):
         mandatory_fields = (
             self.schema["schemas"].get("validations", {})
             .get("mandatory_fields", {}).get("profile", [])
@@ -40,7 +48,7 @@ class DRFactory:
                 (str if field_type == "str" else
                  int if field_type == "int" else
                  float if field_type == "float" else
-                 datetime if field_type == "datetime" else Any),
+                 datetime if field_type == "datetime" else object),
                 Field(None if not is_required else ..., **constraints),
             )
         model = create_model("Profile", **field_definitions)
@@ -58,21 +66,21 @@ class DRFactory:
                 setattr(model, f"validate_{field_name}", validate_enum)
         return model
 
-    def _create_data_model(self) -> Type[BaseModel]:
+    def _create_data_model(self):
         type_constraints = self.schema["schemas"].get("validations", {}).get("type_constraints", {})
         data_fields = self.schema["schemas"].get("entity", {}).get("data", {})
 
         field_definitions = {}
         for field_name, field_type in data_fields.items():
             if field_type == "List[Dict]":
-                field_definitions[field_name] = (List[Dict[str, Any]], Field(default_factory=list))
+                field_definitions[field_name] = (list[dict], Field(default_factory=list))
             elif field_type == "List[str]":
-                field_definitions[field_name] = (List[str], Field(default_factory=list))
+                field_definitions[field_name] = (list[str], Field(default_factory=list))
             else:
                 field_definitions[field_name] = (
                     (str if field_type == "str" else
                      int if field_type == "int" else
-                     float if field_type == "float" else Any),
+                     float if field_type == "float" else object),
                     Field(None),
                 )
         model = create_model("Data", **field_definitions)
@@ -90,7 +98,17 @@ class DRFactory:
                 setattr(model, f"validate_{field_name}", validate_enum)
         return model
 
-    def create_dr(self, dr_type: str, initial_data: Dict[str, Any]) -> Dict:
+    def create_dr(self, dr_type: str, initial_data: dict) -> dict:
+        """
+        Build a new, Digital Replica document.
+
+        Inputs:
+        - dr_type: the replica's schema type
+        - initial_data: optional initial "profile"/"data"/"metadata" values
+
+        Outputs:
+        - a new Digital Replica document
+        """
         ProfileModel = self._create_profile_model()
         DataModel = self._create_data_model()
 
@@ -121,7 +139,14 @@ class DRFactory:
 
         return dr_dict
 
-    def update_dr(self, dr: Dict[str, Any], updates: Dict[str, Any]) -> Dict:
+    def update_dr(self, dr: dict, updates: dict) -> dict:
+        """
+        Update the given Digital Replica document with the given updates.
+
+        Inputs:
+        - dr: the current Digital Replica document
+        - updates: values to update inside the Digital Replica document
+        """
         ProfileModel = self._create_profile_model()
         DataModel = self._create_data_model()
         updated_dr = dr.copy()

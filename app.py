@@ -5,8 +5,8 @@ from flask_cors import CORS
 from src.virtualization.digital_replica.schema_registry import SchemaRegistry
 from src.virtualization.digital_replica.dr_factory import DRFactory
 from src.services.database_service import DatabaseService
-from src.digital_twin.DHome.DHome_dt_factory import DHomeDTFactory
-from src.application.DHome.api import register_api_blueprints
+from src.digital_twin.DHome.dt_factory import DHomeDTFactory
+from src.application.api import register_api_blueprints
 from src.application.auth import limiter
 from src.application.DHome import climate
 from config.config_loader import ConfigLoader
@@ -23,10 +23,13 @@ class FlaskServer:
             # SESSION_COOKIE_SECURE=True,   # enable once served over HTTPS
         )
         CORS(self.app)
-        self._init_components()
-        self._register_blueprints()
+        self.init_components()
+        self.register_blueprints()
 
-    def _init_components(self):
+    def init_components(self):
+        """
+        Set up the schema registry, DB connection, and DT/DR factories.
+        """
         schema_registry = SchemaRegistry()
         schema_registry.load_schema(settings.SCHEMA_TYPE, settings.SCHEMA_PATH)
 
@@ -48,21 +51,38 @@ class FlaskServer:
         self.app.config["DR_FACTORY"] = dr_factory
         self.app.config["DT_FACTORY"] = dt_factory
 
-    def _register_blueprints(self):
+    def register_blueprints(self):
+        """
+        Initialize the rate limiter and register all Flask blueprints.
+        """
         limiter.init_app(self.app)
         register_api_blueprints(self.app)
 
     def run(self, host="0.0.0.0", port=None, debug=False):
+        """
+        Start the outdoor-temp poller and run the Flask server.
+
+        Inputs:
+        - host: bind address
+        - port: bind port (defaults to settings.PORT)
+        - debug: Flask debug mode flag
+        """
         port = port or settings.PORT
         climate.start_poller(self.app.config["DT_FACTORY"])
-        self._banner(port)
+        self.banner(port)
         try:
             self.app.run(host=host, port=port, debug=debug, threaded=True)
         finally:
             if "DB_SERVICE" in self.app.config:
                 self.app.config["DB_SERVICE"].disconnect()
 
-    def _banner(self, port):
+    def banner(self, port):
+        """
+        Print the local network URL the app is reachable at.
+
+        Inputs:
+        - port: port to include in the printed URL
+        """
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             s.connect(("8.8.8.8", 80))

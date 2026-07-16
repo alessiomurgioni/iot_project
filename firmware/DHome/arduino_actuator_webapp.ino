@@ -1,24 +1,21 @@
 #include <SoftwareSerial.h>
 
-// ── Outputs ──────────────────────────────────────────────────────────────────
+// Outputs
 #define RED_LED     10  // HOT AIR
 #define BLUE_LED    11  // COLD AIR
 #define YELLOW_LED   9  // FIRE ALARM SYSTEM
 #define WHITE_LED    4  // WINDOW: ON = open, OFF = closed
 
-// ── Serial link to NodeMCU ────────────────────────────────────────────────────
 #define UNO_RX 2   // Receives from NodeMCU TX
 #define UNO_TX 3   // Sends to NodeMCU RX
 SoftwareSerial linkSerial(UNO_RX, UNO_TX);
 
-// ── State ─────────────────────────────────────────────────────────────────────
 bool fireActive = false;
 bool fireEventLatched = false;
 bool windowOpen = false;
 bool peopleInside = false;
 char requestedAcMode = '0';   // 0 off, 1 cold, 2 hot
 
-// ── Fire alarm ────────────────────────────────────────────────────────────────
 const unsigned long FIRE_ALARM_DURATION_MS = 30000UL;
 const unsigned long BLINK_INTERVAL_MS = 500UL;
 unsigned long fireAlarmStartTime = 0;

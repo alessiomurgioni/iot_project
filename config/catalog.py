@@ -23,16 +23,22 @@ PRODUCTS = {
 def list_products():
     """
     Retrieve a list of available products.
+
+    Output:
+    - list of product config dicts
     """
     return list(PRODUCTS.values())
 
 
 def get_product(key: str):
     """
-    Retrieve a product configuration by its type
+    Retrieve a product configuration by its type.
 
     Input:
     - key: the type of the product
+
+    Output:
+    - product config dict
     """
     return PRODUCTS.get(key)
 
@@ -41,8 +47,11 @@ def label_for(key: str) -> str:
     """
     Retrieve a label for a product by its type.
 
-    Input:
+    Inputs:
     - key: the type of the product
+
+    Outputs:
+    - the product label
     """
     p = PRODUCTS.get(key)
     return p["label"] if p else (key or "Unknown")
