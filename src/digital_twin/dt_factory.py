@@ -1,4 +1,3 @@
-from typing import Dict, List, Optional
 from datetime import datetime
 from bson import ObjectId
 
@@ -15,7 +14,7 @@ class DTFactory:
                  dr_factory: DRFactory = None):
         self.db_service = db_service
         self.schema_registry = schema_registry
-        self.dr_factories: Dict[str, DRFactory] = {}
+        self.dr_factories = {}
         for product in catalog.list_products():
             stype, spath = product["schema_type"], product["schema_path"]
             if stype not in self.schema_registry.schemas:
@@ -23,17 +22,57 @@ class DTFactory:
             if stype not in self.dr_factories:
                 self.dr_factories[stype] = DRFactory(spath)
 
-        self._init_dt_collection()
+        self.init_dt_collection()
+
+    def init_dt_collection(self) -> None:
+        """
+        Initialize the digital_twins collection.
+        """
+        if not self.db_service.is_connected():
+            raise ConnectionError("Database service not connected")
+        db = self.db_service.db
+        if "digital_twins" not in db.list_collection_names():
+            db.create_collection("digital_twins")
+            dt = db["digital_twins"]
+            dt.create_index("name", unique=True)
+            dt.create_index("metadata.created_at")
+            dt.create_index("metadata.updated_at")
+
+    def _get_service_module_mapping(self) -> dict:
+        """
+        Map service names to their modules; overridden by product-specific factories.
+
+        Output:
+        - dict of service name -> module path (empty by default)
+        """
+        return {}
 
     def dr_factory_for(self, schema_type: str) -> DRFactory:
+        """
+        Get the DRFactory for a given schema type.
+
+        Input:
+        - schema_type: the schema's type
+
+        Outputs:
+        - the matching DRFactory
+        """
         if schema_type not in self.dr_factories:
             raise ValueError(f"No DRFactory for schema type '{schema_type}'")
         return self.dr_factories[schema_type]
 
-    def _get_service_module_mapping(self) -> Dict[str, str]:
-        return {}
-
     def create_dt(self, name: str, product: str = None, schema_type: str = None) -> str:
+        """
+        Insert a new Digital Twin document.
+
+        Inputs:
+        - name: twin name
+        - product: product catalog key
+        - schema_type: Digital Replica schema type for this twin
+
+        Output:
+        - the new twin's id
+        """
         dt_data = {
             "_id": str(ObjectId()),
             "name": pseudonymize(name),
@@ -51,6 +90,14 @@ class DTFactory:
         return dt_data["_id"]
 
     def add_digital_replica(self, dt_id: str, dr_type: str, dr_id: str) -> None:
+        """
+        Link an existing Digital Replica to a twin.
+
+        Inputs:
+        - dt_id: the twin's id
+        - dr_type: the replica's schema type
+        - dr_id: the replica's id
+        """
         dr = self.db_service.get_dr(dr_type, dr_id)
         if not dr:
             raise ValueError(f"Digital Replica not found: {dr_id}")
@@ -60,7 +107,16 @@ class DTFactory:
              "$set": {"metadata.updated_at": datetime.utcnow()}},
         )
 
-    def _decrypt_dt_doc(self, doc: Optional[Dict]) -> Optional[Dict]:
+    def _decrypt_dt_doc(self, doc: dict):
+        """
+        Decrypt the digital_replicas id references.
+
+        Inputs:
+        - doc: twin document
+
+        Outputs:
+        - the same document with decrypted digital_replicas ids
+        """
         if not doc:
             return doc
         doc["digital_replicas"] = [
@@ -69,7 +125,15 @@ class DTFactory:
         ]
         return doc
 
-    def add_service(self, dt_id: str, service_name: str, service_config: Dict = None) -> None:
+    def add_service(self, dt_id: str, service_name: str, service_config: dict = None) -> None:
+        """
+        Validate and record a service on a twin.
+
+        Inputs:
+        - dt_id: the twin's id
+        - service_name: name of the service to attach (must be in the module mapping)
+        - service_config: optional config dict stored alongside the attachment
+        """
         mapping = self._get_service_module_mapping()
         if service_name not in mapping:
             raise ValueError(f"Service {service_name} not configured in module mapping")
@@ -87,26 +151,39 @@ class DTFactory:
                 "$set": {"metadata.updated_at": datetime.utcnow()}},
         )
 
-    def get_dt(self, dt_id: str) -> Optional[Dict]:
+    def get_dt(self, dt_id: str):
+        """
+        Fetch a twin's document by id.
+
+        Input:
+        - dt_id: the twin's id
+
+        Output:
+        - the twin document, or None if not found
+        """
         doc = self.db_service.db["digital_twins"].find_one({"_id": dt_id})
         return self._decrypt_dt_doc(doc)
 
-    def list_dts(self) -> List[Dict]:
+    def list_dts(self) -> list:
+        """
+        List all twin documents in the platform.
+
+        Output:
+        - list of twin documents
+        """
         docs = list(self.db_service.db["digital_twins"].find())
         return [self._decrypt_dt_doc(d) for d in docs]
 
-    def _init_dt_collection(self) -> None:
-        if not self.db_service.is_connected():
-            raise ConnectionError("Database service not connected")
-        db = self.db_service.db
-        if "digital_twins" not in db.list_collection_names():
-            db.create_collection("digital_twins")
-            dt = db["digital_twins"]
-            dt.create_index("name", unique=True)
-            dt.create_index("metadata.created_at")
-            dt.create_index("metadata.updated_at")
-
     def create_dt_from_data(self, dt_data: dict) -> DigitalTwin:
+        """
+        Build a live DigitalTwin instance from a stored document.
+
+        Input:
+        - dt_data: raw twin document
+
+        Output:
+        - a DigitalTwin instance
+        """
         dt = DigitalTwin()
         for dr_ref in dt_data.get("digital_replicas", []):
             dr = self.db_service.get_dr(dr_ref["type"], dr_ref["id"])
@@ -123,15 +200,39 @@ class DTFactory:
                     print(f"[DT] Error adding service {service_name}: {e}")
         return dt
 
-    def get_dt_instance(self, dt_id: str) -> Optional[DigitalTwin]:
+    def get_dt_instance(self, dt_id: str):
+        """
+        Load a full DigitalTwin instance by id.
+
+        Input:
+        - dt_id: the twin's id
+
+        Output:
+        - a DigitalTwin instance, or None if not found
+        """
         dt_data = self.get_dt(dt_id)
         if not dt_data:
             return None
         return self.create_dt_from_data(dt_data)
 
-    def _dr_type_of(self, dt: DigitalTwin) -> str:
+    def dr_type_of(self, dt: DigitalTwin) -> str:
+        """
+        Get the schema type of a twin's Digital Replica.
+
+        Input:
+        - dt: a DigitalTwin instance
+
+        Output:
+        - the replica's schema type
+        """
         return dt.digital_replicas[0]["type"]
 
-    def persist_dr(self, dt: DigitalTwin) -> None:
+    def save_dr(self, dt: DigitalTwin) -> None:
+        """
+        Save a twin's current Digital Replica state back to the database.
+
+        Input:
+        - dt: a DigitalTwin instance
+        """
         dr = dt.digital_replicas[0]
         self.db_service.update_dr(dr["type"], dr["_id"], dr)

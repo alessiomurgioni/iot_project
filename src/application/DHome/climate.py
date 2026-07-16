@@ -8,12 +8,34 @@ _lock = threading.Lock()
 _outdoor_by_dt = {}
 
 
+# ----------------------------------------
+#       Utility Functions
+# ----------------------------------------
 def outdoor_temp(dt_id: str):
+    """
+    Get the last polled outdoor temperature for a twin.
+
+    Input:
+    - dt_id: the twin's id
+
+    Output:
+    - last polled temperature
+    """
     with _lock:
         return _outdoor_by_dt.get(dt_id)
 
 
 def fetch_outdoor_temp(lat: float, lon: float) -> float:
+    """
+    Fetch the current outdoor temperature for a device from Open-Meteo.
+
+    Inputs:
+    - lat: device's latitude
+    - lon: device's longitude
+
+    Output:
+    - current temperature in Celsius
+    """
     url = ("https://api.open-meteo.com/v1/forecast"
            f"?latitude={lat}&longitude={lon}&current=temperature_2m")
     r = requests.get(url, timeout=10)
@@ -21,7 +43,18 @@ def fetch_outdoor_temp(lat: float, lon: float) -> float:
     return r.json()["current"]["temperature_2m"]
 
 
-def _coords_for(factory, reg):
+def coords_for(factory, reg):
+    """
+    Get the coordinates for a given device.
+
+    Inputs:
+    - factory: the DT factory to access the DB
+    - reg: the digital twin's document
+
+    Outputs:
+    - lat: device's latitude
+    - lon: device's longitude
+    """
     refs = reg.get("digital_replicas", [])
     if not refs:
         return None, None
@@ -39,12 +72,18 @@ def _coords_for(factory, reg):
 
 
 def poller(factory):
+    """
+    Refresh the outdoor temperature for every twin on a fixed interval.
+
+    Input:
+    - factory: the DT factory
+    """
     while True:
         try:
             for reg in factory.list_dts():
                 dt_id = reg["_id"]
                 try:
-                    lat, lon = _coords_for(factory, reg)
+                    lat, lon = coords_for(factory, reg)
                     t = fetch_outdoor_temp(lat, lon)
                     with _lock:
                         _outdoor_by_dt[dt_id] = t
@@ -57,4 +96,10 @@ def poller(factory):
 
 
 def start_poller(factory):
+    """
+    Start the outdoor-temperature poller in a background thread.
+
+    Inputs:
+    - factory: the DT factory
+    """
     threading.Thread(target=poller, args=(factory,), daemon=True).start()

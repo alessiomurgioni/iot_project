@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
 
 
 class BaseService(ABC):
@@ -7,5 +6,5 @@ class BaseService(ABC):
         self.name = self.__class__.__name__
 
     @abstractmethod
-    def execute(self, data: Dict, dr_type: str = None, attribute: str = None) -> Any:
+    def execute(self, data: dict, dr_type: str = None, attribute: str = None):
         pass

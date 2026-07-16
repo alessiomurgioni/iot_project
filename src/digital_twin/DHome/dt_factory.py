@@ -1,11 +1,15 @@
-from typing import Dict
-
 from src.digital_twin.dt_factory import DTFactory
 from config import catalog
 
 
 class DHomeDTFactory(DTFactory):
-    def _get_service_module_mapping(self) -> Dict[str, str]:
+    def _get_service_module_mapping(self) -> dict:
+        """
+        Map DHome service names to their implementing modules.
+
+        Output:
+        - dict of service name -> module path
+        """
         return {
             "ClimateControlService": "src.services.DHome.climate_control",
             "FireNotificationService": "src.services.DHome.fire_notification",
@@ -13,12 +17,17 @@ class DHomeDTFactory(DTFactory):
 
     def create_twin_for_device(self, device_id: str, product: str = None,
                                house_name: str = None) -> str:
-        """Provision a fresh twin for a just-claimed device of the given product
-        type. Looks the product up in the fixed catalog to pick the Digital
-        Replica schema and the services to attach, builds a new DR (id ==
-        device_id, unique per unit), registers the twin (recording its product
-        + schema_type), links the DR, and attaches the product's services.
-        Returns the twin id. Raises ValueError for an unknown product."""
+        """
+        Create a twin for a device.
+
+        Inputs:
+        - device_id: physical device id, used as the Digital Replica id
+        - product: product key
+        - house_name: optional display name for the profile
+
+        Output:
+        - the new twin's id
+        """
         product = product or catalog.DEFAULT_PRODUCT
         spec = catalog.get_product(product)
         if not spec:
@@ -38,7 +47,15 @@ class DHomeDTFactory(DTFactory):
         return dt_id
 
     def is_online(self, dt_id: str) -> bool:
-        """Device liveness from the replica's last_report vs STALE_AFTER_S."""
+        """
+        Check if a device is currently online.
+
+        Input:
+        - dt_id: the twin's id
+
+        Output:
+        - True if the device reported recently enough, else False
+        """
         from config import settings
         from datetime import datetime
 

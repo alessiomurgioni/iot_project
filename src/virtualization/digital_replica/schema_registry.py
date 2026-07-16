@@ -1,5 +1,26 @@
-from typing import Dict, Any
 import yaml
+
+
+# ----------------------------------------
+#       Utility Functions
+# ----------------------------------------
+def convert_type(yaml_type: str) -> str:
+    type_mapping = {
+        "str": "string", "int": "int", "float": "double", "bool": "bool",
+        "datetime": "date", "Dict": "object", "List": "array",
+    }
+    return type_mapping.get(yaml_type, yaml_type)
+
+
+def process_field(field_def):
+    if isinstance(field_def, str):
+        return {"bsonType": convert_type(field_def)}
+    elif isinstance(field_def, dict):
+        return {"bsonType": "object",
+                "properties": {k: process_field(v) for k, v in field_def.items()}}
+    elif isinstance(field_def, list):
+        return {"bsonType": "array"}
+    return field_def
 
 
 class SchemaRegistry:
@@ -17,24 +38,7 @@ class SchemaRegistry:
         except Exception as e:
             raise ValueError(f"Failed to load schema from {yaml_path}: {str(e)}")
 
-    def _convert_yaml_to_mongodb_schema(self, yaml_schema: Dict) -> Dict:
-        def convert_type(yaml_type: str) -> str:
-            type_mapping = {
-                "str": "string", "int": "int", "float": "double", "bool": "bool",
-                "datetime": "date", "Dict": "object", "List": "array",
-            }
-            return type_mapping.get(yaml_type, yaml_type)
-
-        def process_field(field_def):
-            if isinstance(field_def, str):
-                return {"bsonType": convert_type(field_def)}
-            elif isinstance(field_def, dict):
-                return {"bsonType": "object",
-                        "properties": {k: process_field(v) for k, v in field_def.items()}}
-            elif isinstance(field_def, list):
-                return {"bsonType": "array"}
-            return field_def
-
+    def _convert_yaml_to_mongodb_schema(self, yaml_schema: dict) -> dict:
         properties = {}
         if "common_fields" in yaml_schema:
             for field_name, field_def in yaml_schema["common_fields"].items():
@@ -61,7 +65,7 @@ class SchemaRegistry:
     def get_collection_name(self, schema_type: str) -> str:
         return f"{schema_type}_replicas"
 
-    def get_validation_schema(self, schema_type: str) -> Dict:
+    def get_validation_schema(self, schema_type: str) -> dict:
         if schema_type not in self.schemas:
             raise ValueError(f"Schema not found for type: {schema_type}")
         return self.schemas[schema_type]

@@ -5,41 +5,38 @@
 #include <WiFiUdp.h>
 #include <WiFiClient.h>
 
-// ── Communications Configuration ──────────────────────────────────────────────
 const char* WIFI_SSID     = "iPhone di Riccardo";   // hotspot SSID
 const char* WIFI_PASSWORD = "riccardo";             // hotspot password
 const char* SERVER_IP     = "172.20.10.2";          // IP printed by the server
 const uint16_t SERVER_PORT = 8000;                  // must match config/settings.py PORT
 
-// ── Device identity (multi-tenant platform) ───────────────────────────────────
-const char* DEVICE_ID    = "dhome-001";
+const char* DEVICE_ID    = "cagliari-001";
 const char* DEVICE_TOKEN = "tok-secret-001";
 
-//  ─────────────────────────────────────────────────────────────────────────────
 
-//  ── Timing ─────────────────────────────────────────────────────────────────────
+// Timing
 const unsigned long OUTDOOR_POLL_MS = 15000UL;
 const unsigned long REPORT_INTERVAL_MS = 2000UL;
 const unsigned long HTTP_TIMEOUT_MS  =  5000UL;
 const unsigned long WIFI_RETRY_MS    =  5000UL;
 
-// ── DHT11 ─────────────────────────────────────────────────────────────────────
+// DHT11
 #define DHTPIN    D4
 #define DHTTYPE   DHT11
 
-// ── SoftwareSerial link to Arduino ────────────────────────────────────────────
+// Serial link to Arduino
 #define NODE_RX   D5
 #define NODE_TX   D6
 
-// ── IR Flame sensor ───────────────────────────────────────────────────────────
+// IR Flame sensor
 #define IR_FLAME_PIN  D1
 
-// ── People counter – IR obstacle sensors (LM393) ─────────────────────────────
+// People counter
 const uint8_t SENSOR_1_PIN = D0;   // outside
 const uint8_t SENSOR_2_PIN = D2;   // inside
 const uint8_t DETECTED_LEVEL = LOW;
 
-// ── Timing Settings ─────────────────────────────────────────────────────────────────────
+// Timing Settings
 const unsigned long DEBOUNCE_TIME_MS    =   35;
 const unsigned long PASSAGE_TIMEOUT_MS  = 1200;
 const unsigned long REARM_TIME_MS       =  250;
@@ -47,37 +44,37 @@ const unsigned long REARM_TIME_MS       =  250;
 DHT dht(DHTPIN, DHTTYPE);
 SoftwareSerial linkSerial(NODE_RX, NODE_TX);
 
-// ── People-counter variables ───────────────────────────────────────────────────
+// People-counter variables
 int  peopleInside  = 0;
 unsigned long totalEntries = 0;
 unsigned long totalExits   = 0;
 
-// ── External temperature ──────────────────────────────
+// External temperature
 float externalTemperature = NAN;
 unsigned long lastOutdoorPoll = 0;
 
-// ── Owner's desired AC behaviour ─────────────────────
+// Desired AC behaviour
 String acMode      = "auto";
 float  acThreshold  = 25.0;
 
-// ── Window state ──────────────────────────────────────────────────────────────
+// Window state
 String windowCommand     = "none";
 String lastWindowCommand = "none";
 bool   windowsOpen       = false;
 
-// ── Sensor debouncing ─────────────────────────────────────────────────────────
+// Sensor debouncing
 struct SensorFilter { bool rawState; bool stableState; unsigned long lastChangeTime; };
 SensorFilter sensor1Filter;
 SensorFilter sensor2Filter;
 
-// ── Counter state machine ─────────────────────────────────────────────────────
+// Counter state machine
 enum CounterState { IDLE, SENSOR_1_TRIGGERED_FIRST, SENSOR_2_TRIGGERED_FIRST, WAIT_FOR_CLEAR };
 CounterState currentState = IDLE;
 unsigned long sequenceStartTime = 0;
 unsigned long clearStartTime    = 0;
 
 
-// ── WiFi helpers ──────────────────────────────────────────────────────────────
+// WiFi helpers
 void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) return;
   Serial.print("[WiFi] Connecting to "); Serial.print(WIFI_SSID);
@@ -92,7 +89,7 @@ void connectWiFi() {
   }
 }
 
-// ── JSON value extractors ─────────────────────────────────────────────────
+// JSON value extractors
 String jsonString(const String& body, const char* key) {
   String needle = String("\"") + key + "\":\"";
   int i = body.indexOf(needle);
@@ -110,13 +107,10 @@ float jsonNumber(const String& body, const char* key) {
   return body.substring(i).toFloat();
 }
 
-// ── HTTP helpers ────────────────────────────────────────────────────────────
+// HTTP helpers
 void fetchOutdoorTemperature() {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClient client; HTTPClient http;
-  // device_id identifies this device; the token proves possession and is
-  // sent only in the Authorization header, never in the URL (so it can't
-  // leak through server/proxy access logs).
   String url = String("http://") + SERVER_IP + ":" + SERVER_PORT +
                "/api/outdoor-temp?device_id=" + DEVICE_ID;
   http.setTimeout(HTTP_TIMEOUT_MS);
@@ -144,10 +138,6 @@ void fetchOutdoorTemperature() {
 void reportToServer(float indoorTemp, bool fireNow, const char* acBlowing) {
   if (WiFi.status() != WL_CONNECTED) return;
   WiFiClient client; HTTPClient http;
-  // /api/report is now POST + JSON only: device_id/token never sit in the
-  // URL (so they can't leak through server/proxy access logs) -- the token
-  // travels only in the Authorization header, over the request actually
-  // proving possession of it.
   String url = String("http://") + SERVER_IP + ":" + SERVER_PORT + "/api/report";
 
   String body = String("{") +
@@ -181,7 +171,7 @@ void reportToServer(float indoorTemp, bool fireNow, const char* acBlowing) {
   }
 }
 
-// ── Sensor helpers ────────────────────────────────────────────────────────────
+// Sensor helpers
 bool readDebouncedSensor(SensorFilter &filter, uint8_t pin) {
   bool currentRawState = (digitalRead(pin) == DETECTED_LEVEL);
   unsigned long currentTime = millis();
@@ -195,7 +185,7 @@ void initializeSensorFilter(SensorFilter &filter, uint8_t pin) {
   filter.rawState = detected; filter.stableState = detected; filter.lastChangeTime = millis();
 }
 
-// ── Counter event handlers ────────────────────────────────────────────────────
+// Counter event handlers
 void sendPeopleInsideFlag() {
   if (peopleInside > 0) { linkSerial.println("PEOPLE_INSIDE:1"); Serial.println("    [flag] PEOPLE_INSIDE:1 sent"); }
   else                  { linkSerial.println("PEOPLE_INSIDE:0"); Serial.println("    [flag] PEOPLE_INSIDE:0 sent"); }
@@ -211,7 +201,7 @@ void registerExit() {
   currentState = WAIT_FOR_CLEAR; clearStartTime = 0;
 }
 
-// ── People counter ─────────────────
+// People counter
 void updatePeopleCounter() {
   bool s1 = readDebouncedSensor(sensor1Filter, SENSOR_1_PIN);
   bool s2 = readDebouncedSensor(sensor2Filter, SENSOR_2_PIN);
@@ -241,7 +231,7 @@ void updatePeopleCounter() {
   }
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
+// Main
 void setup() {
   Serial.begin(115200);
   linkSerial.begin(9600);

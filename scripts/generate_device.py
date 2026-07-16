@@ -11,6 +11,7 @@ def main():
         print(
             "Usage: python -m scripts.provision_device "
             "DEVICE_ID DEVICE_TOKEN OWNER_KEY LATITUDE LONGITUDE"
+            "\nThis script will generate a device with given DEVICE_ID, DEVICE_TOKEN and position!"
         )
         sys.exit(1)
 
@@ -42,7 +43,7 @@ def main():
     finally:
         db.disconnect()
 
-    print(f"Provisioned device '{device_id}' (secrets stored hashed). Ready to be claimed.")
+    print(f"Device '{device_id}' Generated successfully!")
 
 
 if __name__ == "__main__":
