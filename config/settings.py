@@ -12,10 +12,8 @@ SECRET_KEY = os.environ.get(
 PORT = int(os.environ.get("WEBAPP_PORT", "8000"))
 
 # Symmetric key used to encrypt sensitive data
-DB_ENCRYPTION_KEY = os.environ.get(
-    "DB_ENCRYPTION_KEY",
-    "rnAvD-ZLeNqPRmyfWPZnfE8S48sxRc9Q5frI2Hu_iTU=",
-)
+DB_ENCRYPTION_KEY = os.environ.get("DB_ENCRYPTION_KEY", "rnAvD-ZLeNqPRmyfWPZnfE8S48sxRc9Q5frI2Hu_iTU=",
+                                   )
 
 # Digital Replica schema for the house.
 SCHEMA_TYPE = "house"
