@@ -18,6 +18,7 @@ schemas:
       fire: bool
       ac_blowing: str
       windows: str
+      windows_state: str
       mode: str
       threshold: float
       last_report: datetime
@@ -30,6 +31,8 @@ schemas:
       ac_blowing:
         enum: ["cool", "heat", "off"]
       windows:
+        enum: ["open", "closed"]
+      windows_state:
         enum: ["open", "closed"]
       mode:
         enum: ["auto", "cool", "heat", "off"]
@@ -44,5 +47,6 @@ schemas:
         fire: false
         ac_blowing: "off"
         windows: "closed"
+        windows_state: "closed"
         mode: "auto"
         threshold: 25.0

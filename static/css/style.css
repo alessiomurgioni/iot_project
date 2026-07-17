@@ -271,7 +271,7 @@ header {
 
 .grid {
     display: grid;
-    grid-template-columns:repeat(3, 1fr);
+    grid-template-columns:repeat(4, 1fr);
     gap: 12px;
     margin-top: 14px
 }
@@ -323,6 +323,17 @@ header {
     background: rgba(244, 63, 94, .14);
     color: var(--alert);
     animation: flash 1s steps(2, start) infinite
+}
+
+.chip.win-open {
+    background: rgba(56, 189, 248, .16);
+    color: #38bdf8
+}
+
+.chip.win-closed {
+    background: #1b222b;
+    border: 1px solid var(--line);
+    color: var(--muted)
 }
 
 @keyframes flash {

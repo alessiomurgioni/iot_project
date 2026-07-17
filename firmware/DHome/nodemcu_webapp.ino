@@ -146,7 +146,7 @@ void reportToServer(float indoorTemp, bool fireNow, const char* acBlowing) {
     "\"people\":\""    + String(peopleInside) + "\"," +
     "\"fire\":\""      + (fireNow ? "1" : "0") + "\"," +
     "\"ac\":\""        + acBlowing + "\"," +
-    "\"windows\":\""   + (windowsOpen ? "open" : "closed") + "\"" +
+    "\"windows_state\":\""   + (windowsOpen ? "open" : "closed") + "\"" +
   "}";
 
   http.setTimeout(HTTP_TIMEOUT_MS);
@@ -302,7 +302,7 @@ void loop() {
       if (linkSerial.available()) { offAck = linkSerial.readStringUntil('\n'); offAck.trim(); break; } }
   }
 
-  if ((windowCommand == "open" || windowCommand == "close") && windowCommand != lastWindowCommand) {
+  if ((windowCommand == "open" || windowCommand == "closed") && windowCommand != lastWindowCommand) {
     String cmd = (windowCommand == "open") ? "WINDOW_OPEN" : "WINDOW_CLOSED";
     Serial.print("[WINDOW] Sending: "); Serial.println(cmd);
     linkSerial.println(cmd);
