@@ -4,7 +4,7 @@
 #define RED_LED     10  // HOT AIR
 #define BLUE_LED    11  // COLD AIR
 #define YELLOW_LED   9  // FIRE ALARM SYSTEM
-#define WHITE_LED    4  // WINDOW: ON = open, OFF = closed
+#define WHITE_LED    4  // WINDOWS: ON = open, OFF = closed
 
 #define UNO_RX 2   // Receives from NodeMCU TX
 #define UNO_TX 3   // Sends to NodeMCU RX
@@ -27,8 +27,8 @@ void turnOffAirConditioning();
 void setWindow(bool open) {
   windowOpen = open;
   digitalWrite(WHITE_LED, open ? HIGH : LOW);
-  if (open) { Serial.println("Window OPENED"); turnOffAirConditioning(); }
-  else Serial.println("Window CLOSED");
+  if (open) { Serial.println("Windows OPENED"); turnOffAirConditioning(); }
+  else Serial.println("Windows CLOSED");
 }
 
 void turnOffAirConditioning() {
@@ -48,7 +48,7 @@ void startFireAlarm() {
   fireActive = true; fireEventLatched = true;
   yellowState = false; digitalWrite(YELLOW_LED, LOW);
   fireAlarmStartTime = millis(); lastBlinkTime = millis();
-  if (windowOpen) { setWindow(false); Serial.println("Window closed due to FIRE"); }
+  if (windowOpen) { setWindow(false); Serial.println("Windows closed due to FIRE"); }
   Serial.println("FIRE alarm started (30s)");
 }
 
