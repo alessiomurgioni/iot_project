@@ -158,7 +158,7 @@ void reportToServer(float indoorTemp, bool fireNow, const char* acBlowing) {
       String respBody = http.getString();
       String newMode = jsonString(respBody, "mode");
       float newThreshold = jsonNumber(respBody, "threshold");
-      String newWindow = jsonString(respBody, "window");
+      String newWindow = jsonString(respBody, "windows");
       if (newMode.length() > 0) acMode = newMode;
       if (!isnan(newThreshold)) acThreshold = newThreshold;
       if (newWindow.length() > 0) windowCommand = newWindow;

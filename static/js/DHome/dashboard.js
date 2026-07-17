@@ -45,7 +45,7 @@ async function refresh() {
 
         const fire = !!s.fire;
         canControl = !!s.can_control;
-        const windowsOpen = s.control.window === "open";
+        const windowsOpen = s.control.windows === "open";
         const locked = !canControl || fire;
         acControllable = !locked && !windowsOpen;
         winControllable = !locked;
@@ -103,7 +103,7 @@ async function refresh() {
             }
         }
         winModes.querySelectorAll("button").forEach((b) =>
-            b.classList.toggle("active", b.dataset.window === s.control.window));
+            b.classList.toggle("active", b.dataset.window === s.control.windows));
     } catch (e) {
     }
 }
@@ -123,7 +123,7 @@ document.querySelectorAll("#modes_ac button").forEach((b) =>
     }));
 document.querySelectorAll("#modes_win button").forEach((b) =>
     b.addEventListener("click", () => {
-        if (winControllable) sendControl({window: b.dataset.window});
+        if (winControllable) sendControl({windows: b.dataset.window});
     }));
 
 const thr = document.getElementById("thr");

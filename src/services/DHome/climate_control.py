@@ -11,7 +11,7 @@ class ClimateControlService(BaseService):
         Inputs:
         - data: the twin's Digital Replica data
         - action: "set_control" or "update_from_device"
-        - kwargs: action-specific fields (mode, threshold, window, indoor, people, fire, ac, windows)
+        - kwargs: action-specific fields (mode, threshold, windows, indoor, people, fire, ac)
 
         Output:
         - the updated Digital Replica
@@ -19,7 +19,7 @@ class ClimateControlService(BaseService):
         dr = data["digital_replicas"][0]
         d = dr["data"]
         if action == "set_control":
-            self._set_control(d, kwargs.get("mode"), kwargs.get("threshold"), kwargs.get("window"))
+            self._set_control(d, kwargs.get("mode"), kwargs.get("threshold"), kwargs.get("windows"))
         elif action == "update_from_device":
             self._update_from_device(
                 d, kwargs.get("indoor"), kwargs.get("people"),
@@ -29,7 +29,7 @@ class ClimateControlService(BaseService):
             raise ValueError(f"Unknown action: {action}")
         return dr
 
-    def _set_control(self, d, mode, threshold, window):
+    def _set_control(self, d, mode, threshold, windows):
         """
         Apply an owner/member control change.
 
@@ -37,14 +37,14 @@ class ClimateControlService(BaseService):
         - d: the replica's data dict, mutated in place
         - mode: "auto" | "cool" | "heat" | "off", or None to leave unchanged
         - threshold: target temperature, or None to leave unchanged
-        - window: "open" | "closed", or None to leave unchanged
+        - windows: "open" | "closed", or None to leave unchanged
         """
         if d.get("fire"):
             d["mode"], d["windows"] = "off", "closed"
             return
-        if window in ("open", "closed"):
-            d["windows"] = window
-            if window == "open":
+        if windows in ("open", "closed"):
+            d["windows"] = windows
+            if windows == "open":
                 d["mode"] = "off"
         if d["windows"] == "closed":
             if mode in ("auto", "cool", "heat", "off"):
@@ -98,6 +98,8 @@ class ClimateControlService(BaseService):
 
         if windows in ("open", "closed"):
             d["windows"] = windows
+            if windows == "open":
+                d["mode"] = "off"
         elif windows not in (None, ""):
             print(f"[CLIMATE_CONTROL] Ignoring malformed windows: {windows!r}")
 

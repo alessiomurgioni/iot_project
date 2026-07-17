@@ -1,2 +1,2 @@
- python -m scripts.generate_device boston-001 tok-secret-001 owner-key-001 42.36028 -71.05778
+ python -m scripts.generate_device boston-001 tok-secret-002 owner-key-002 42.36028 -71.05778
  python -m scripts.generate_device cagliari-001 tok-secret-001 owner-key-001  39.227779 9.111111

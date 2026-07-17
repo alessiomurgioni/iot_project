@@ -60,7 +60,7 @@ def state(dt_id):
     snap["outdoor_temp"] = live if live is not None else d.get("outdoor_temp")
     snap["online"] = factory().is_online(dt_id)
     snap["control"] = {"mode": d.get("mode"), "threshold": d.get("threshold"),
-                       "window": d.get("windows")}
+                       "windows": d.get("windows")}
     snap["can_control"] = can_control(session["user"], dt_id)
     snap["is_owner"] = is_owner(session["user"], dt_id)
     return jsonify(snap)
@@ -74,31 +74,31 @@ def control(dt_id):
 
     data = request.get_json(silent=True) or request.form
     mode = data.get("mode")
-    window = data.get("window")
+    windows = data.get("windows")
     threshold = data.get("threshold")
 
     if mode is not None and mode not in ALLOWED_MODES:
         return jsonify({"error": "Invalid mode."}), 400
-    if window is not None and window not in ALLOWED_WINDOWS:
-        return jsonify({"error": "Invalid window command."}), 400
+    if windows is not None and windows not in ALLOWED_WINDOWS:
+        return jsonify({"error": "Invalid windows command."}), 400
     if threshold is not None:
         try:
             threshold = float(threshold)
         except (TypeError, ValueError):
             return jsonify({"error": "Threshold must be a number."}), 400
-    if mode is None and window is None and threshold is None:
+    if mode is None and windows is None and threshold is None:
         return jsonify({"error": "Nothing to update."}), 400
 
     dt, err = get_twin(dt_id)
     if err:
         return err
     dr = dt.execute_service("ClimateControlService", action="set_control",
-                            mode=mode, threshold=threshold, window=(window or None))
+                            mode=mode, threshold=threshold, windows=(windows or None))
     factory().save_dr(dt)
     d = dr["data"]
     print(f"[API] {dt_id} control by {session['user']}: "
-          f"mode={d['mode']} threshold={d['threshold']} window={d['windows']}")
-    return jsonify({"mode": d["mode"], "threshold": d["threshold"], "window": d["windows"]})
+          f"mode={d['mode']} threshold={d['threshold']} windows={d['windows']}")
+    return jsonify({"mode": d["mode"], "threshold": d["threshold"], "windows": d["windows"]})
 
 
 @device_api.route("/report", methods=["POST"])
@@ -123,7 +123,7 @@ def report():
     d = dr["data"]
     if d.get("fire") and not was_on_fire:
         alert_fire(dt, dt_id, device_id, dr)
-    return jsonify({"mode": d["mode"], "threshold": d["threshold"], "window": d["windows"]})
+    return jsonify({"mode": d["mode"], "threshold": d["threshold"], "windows": d["windows"]})
 
 
 @device_api.route("/outdoor-temp")
