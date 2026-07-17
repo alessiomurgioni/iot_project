@@ -118,7 +118,7 @@ def report():
     dr = dt.execute_service("ClimateControlService", action="update_from_device",
                             indoor=payload.get("indoor"), people=payload.get("people"),
                             fire=payload.get("fire"), ac=payload.get("ac"),
-                            windows=payload.get("windows"))
+                            windows_state=payload.get("windows_state"))
     factory().save_dr(dt)
     d = dr["data"]
     if d.get("fire") and not was_on_fire:

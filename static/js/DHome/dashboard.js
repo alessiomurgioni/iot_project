@@ -43,9 +43,23 @@ async function refresh() {
             fc.textContent = "Clear";
         }
 
+        const wc = document.getElementById("windowsChip");
+        if (wc) {
+            if (s.windows_state === "open") {
+                wc.className = "chip win-open";
+                wc.textContent = "Open";
+            } else if (s.windows_state === "closed") {
+                wc.className = "chip win-closed";
+                wc.textContent = "Closed";
+            } else {
+                wc.className = "chip win-closed";
+                wc.textContent = "Unknown";
+            }
+        }
+
         const fire = !!s.fire;
         canControl = !!s.can_control;
-        const windowsOpen = s.control.windows === "open";
+        const windowsOpen = s.windows_state === "open";
         const locked = !canControl || fire;
         acControllable = !locked && !windowsOpen;
         winControllable = !locked;
