@@ -40,7 +40,7 @@ class ClimateControlService(BaseService):
         - windows: "open" | "closed", or None to leave unchanged
         """
         if d.get("fire"):
-            d["mode"], d["windows"] = "off", "closed"
+            d["mode"], d["windows_state"], d["windows"] = "off", "closed", "closed"
             return
         if windows in ("open", "closed"):
             d["windows"] = windows
@@ -81,6 +81,8 @@ class ClimateControlService(BaseService):
                 d["people_inside"] = new_people
                 if prev_people >= 1 and new_people == 0:
                     d["mode"] = "off"
+                    d["windows"] = "closed"
+                    d["windows_state"] = "closed"
 
         if fire in ("1", "true", "True"):
             d["fire"] = True
