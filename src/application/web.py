@@ -71,6 +71,7 @@ def render_home(error=None, status=200):
         items.append({
             "dt_id": m["dt_id"],
             "name": device_label(m, reg, m["dt_id"]),
+            "product_key": product_key,
             "product_label": catalog.label_for(product_key),
             "role": m.get("role", "member"),
             "can_control": m.get("can_control", True),

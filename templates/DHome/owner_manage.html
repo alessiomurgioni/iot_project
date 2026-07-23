@@ -3,7 +3,12 @@
 {% block body %}
 <div class="wrap">
     <header>
-        <div class="brand"><span class="dot"></span><b>DHome</b></div>
+        <div class="brand">
+            <svg class="house-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M12 2.5 1.5 11h3V21h6v-6h3v6h6V11h3z"/>
+            </svg>
+            <b>DHome</b>
+        </div>
         <div class="right">
             <span class="status" id="status"><span class="pulse"></span><span id="statusTxt">connecting…</span></span>
             <span class="who">{{ device_name }}</span>
@@ -14,8 +19,7 @@
 
     <section class="controls">
         <h2>Accounts with access to this device</h2>
-        <p class="hint">Toggle whether an account can change AC / Windows, or remove it from this device.
-            Removing an account only revokes this device — its login and other devices are untouched.</p>
+        <p class="hint">Toggle whether an account can change AC / Windows, or remove it from this device.</p>
         <table class="users" id="usersTable">
             <thead>
             <tr>

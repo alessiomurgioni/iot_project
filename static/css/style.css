@@ -168,6 +168,22 @@ body {
     transition: all .4s
 }
 
+.house-icon {
+    width: 20px;
+    height: 20px;
+    fill: var(--accent);
+    filter: drop-shadow(0 0 6px var(--accent));
+    transition: all .4s
+}
+
+.mainframe-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--accent);
+    filter: drop-shadow(0 0 6px var(--accent));
+    transition: all .4s
+}
+
 .wrap {
     max-width: 860px;
     margin: 0 auto;
@@ -634,6 +650,47 @@ body.fire {
 .device-name .device-status {
     margin-right: 6px;
     vertical-align: middle;
+}
+
+.device-icon {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    margin-right: 6px;
+    vertical-align: middle;
+    background-color: var(--muted);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+.device-icon.live {
+    background-color: var(--ok);
+    filter: drop-shadow(0 0 6px var(--ok));
+}
+
+.device-card:hover .device-icon,
+.device-card.fire .device-icon {
+    background-color: var(--cool);
+    filter: none;
+}
+
+.device-icon.icon-dhome {
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2.5 1.5 11h3V21h6v-6h3v6h6V11h3z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M12 2.5 1.5 11h3V21h6v-6h3v6h6V11h3z'/></svg>");
+}
+
+.device-icon.icon-garage {
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 21V10.2L12 3l9 7.2V21h-6v-8H9v8z'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 21V10.2L12 3l9 7.2V21h-6v-8H9v8z'/></svg>");
+}
+
+.device-icon.icon-default {
+    -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='4' y='4' width='16' height='16' rx='3' fill='none' stroke='black' stroke-width='2'/><circle cx='12' cy='12' r='2.5'/></svg>");
+    mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='4' y='4' width='16' height='16' rx='3' fill='none' stroke='black' stroke-width='2'/><circle cx='12' cy='12' r='2.5'/></svg>");
 }
 
 .device-meta {

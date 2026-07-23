@@ -3,6 +3,8 @@
 const DT = window.DT_ID;
 const body = document.getElementById("usersBody");
 const errBox = document.getElementById("ownerErr");
+const accentFor = (b) =>
+    b === "cool" ? "var(--cool)" : b === "heat" ? "var(--warm)" : "var(--muted)";
 
 function showError(msg) {
     errBox.textContent = msg;
@@ -123,6 +125,10 @@ async function deviceStatus() {
             return;
         }
         const s = await r.json();
+
+        const accent = accentFor(s.ac_blowing);
+        document.documentElement.style.setProperty("--accent", accent);
+
         const st = document.getElementById("status");
         const txt = document.getElementById("statusTxt");
         if (s.online) {
